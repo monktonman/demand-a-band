@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +50,21 @@ const PRICE_TIERS = [
 ];
 
 export default function DreamShowPage() {
+  return (
+    <Suspense fallback={
+      <div className="mx-auto max-w-4xl px-4 py-24 text-center">
+        <div className="mx-auto h-16 w-16 animate-pulse rounded-full bg-orange-100" />
+        <div className="mx-auto mt-6 h-8 w-48 animate-pulse rounded-lg bg-zinc-100" />
+      </div>
+    }>
+      <DreamShowContent />
+    </Suspense>
+  );
+}
+
+function DreamShowContent() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [bands, setBands] = useState<Band[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -66,6 +81,23 @@ export default function DreamShowPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareCode, setShareCode] = useState("");
   const [copied, setCopied] = useState(false);
+
+  // Auto-select band from query params (e.g., from Artists page)
+  useEffect(() => {
+    const bandId = searchParams.get("band");
+    const bandName = searchParams.get("bandName");
+    if (bandId && bandName && !selectedBand) {
+      setSelectedBand({
+        id: bandId,
+        name: decodeURIComponent(bandName),
+        slug: "",
+        genres: [],
+        popularity: null,
+        monthlyListeners: null,
+      });
+      setStep(2);
+    }
+  }, [searchParams, selectedBand]);
 
   // Load venues
   useEffect(() => {

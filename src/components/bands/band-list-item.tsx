@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Music2, Users, TrendingUp } from "lucide-react";
+import { Music2, Users, TrendingUp, Sparkles } from "lucide-react";
 
 interface BandListItemProps {
   band: {
@@ -99,17 +100,17 @@ export function BandListItem({ band, index }: BandListItemProps) {
         </span>
       </div>
 
-      {/* Events badge */}
-      <div className="w-16 text-right">
-        {eventCount > 0 ? (
-          <Badge className="bg-orange-100 text-orange-700 text-xs">
-            {eventCount} live
-          </Badge>
-        ) : (
-          <Badge className={getPopularityColor(popularity)} variant="secondary">
-            {popularity}
-          </Badge>
-        )}
+      {/* Dream Show button */}
+      <div className="w-28 text-right">
+        <Link
+          href={`/dream-show?band=${band.id}&bandName=${encodeURIComponent(band.name)}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button className="inline-flex items-center gap-1 rounded-md border border-orange-200 bg-white px-2.5 py-1.5 text-xs font-medium text-orange-600 transition-colors hover:bg-orange-50 hover:text-orange-700">
+            <Sparkles className="h-3 w-3" />
+            Dream Show
+          </button>
+        </Link>
       </div>
     </div>
   );

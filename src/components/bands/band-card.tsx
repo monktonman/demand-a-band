@@ -1,10 +1,13 @@
+import Link from "next/link";
 import {
   Card,
   CardContent,
   CardHeader,
+  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Music2, Users, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Music2, Users, TrendingUp, Sparkles } from "lucide-react";
 
 interface BandCardProps {
   band: {
@@ -106,11 +109,28 @@ export function BandCard({ band }: BandCardProps) {
           </span>
           {eventCount > 0 && (
             <span className="text-orange-600 font-medium">
-              {eventCount} {eventCount === 1 ? "event" : "events"}
+              {eventCount} {eventCount === 1 ? "show" : "shows"}
             </span>
           )}
         </div>
       </CardContent>
+
+      <CardFooter className="pt-0">
+        <Link
+          href={`/dream-show?band=${band.id}&bandName=${encodeURIComponent(band.name)}`}
+          className="w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-1.5 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Dream Show
+          </Button>
+        </Link>
+      </CardFooter>
     </Card>
   );
 }

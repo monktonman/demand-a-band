@@ -301,7 +301,7 @@ export default function BandsPage() {
             <span className="hidden sm:block w-24 text-right">Listeners</span>
             <span className="hidden md:block w-32">Popularity</span>
             <span className="hidden lg:block w-20">Demand</span>
-            <span className="w-16 text-right">Status</span>
+            <span className="w-28 text-right">Action</span>
           </div>
           {bands.map((band, i) => (
             <BandListItem
