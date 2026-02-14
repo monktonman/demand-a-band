@@ -67,7 +67,14 @@ export default async function AdminEventsPage() {
               <TableBody>
                 {events.map((event) => (
                   <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.title}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/admin/events/${event.id}`}
+                        className="text-orange-600 hover:underline"
+                      >
+                        {event.title}
+                      </Link>
+                    </TableCell>
                     <TableCell>{event.band.name}</TableCell>
                     <TableCell>{event.venue.name}</TableCell>
                     <TableCell>{formatDate(event.eventDate)}</TableCell>

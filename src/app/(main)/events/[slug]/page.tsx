@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -11,11 +12,11 @@ import {
   Users,
   Music2,
   Clock,
-  Ticket,
   ArrowLeft,
 } from "lucide-react";
 import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
 import { EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "@/lib/constants";
+import { PledgeButton } from "@/components/events/pledge-button";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,8 @@ export default async function EventDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
+  const session = await getServerSession(authOptions);
 
   const event = await prisma.event.findUnique({
     where: { slug },
@@ -49,6 +52,23 @@ export default async function EventDetailPage({
     100
   );
   const remainingPledges = Math.max(event.minPledges - pledgeCount, 0);
+  const isAcceptingPledges =
+    (event.status === "PROPOSED" || event.status === "THRESHOLD_MET") &&
+    new Date() < event.pledgeDeadline;
+
+  // Check if user has already pledged
+  let userHasPledged = false;
+  if (session?.user?.id) {
+    const existingPledge = await prisma.pledge.findUnique({
+      where: {
+        userId_eventId: {
+          userId: session.user.id,
+          eventId: event.id,
+        },
+      },
+    });
+    userHasPledged = !!existingPledge;
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -202,13 +222,15 @@ export default async function EventDetailPage({
 
               {/* CTA */}
               <div className="space-y-2">
-                <Button
-                  className="w-full bg-orange-600 text-base hover:bg-orange-700"
-                  size="lg"
-                >
-                  <Ticket className="mr-2 h-4 w-4" />
-                  Pledge {formatCurrency(totalPrice)}
-                </Button>
+                <PledgeButton
+                  eventId={event.id}
+                  ticketPrice={ticketPrice}
+                  serviceFee={serviceFee}
+                  maxCapacity={event.maxCapacity}
+                  currentPledges={pledgeCount}
+                  isAcceptingPledges={isAcceptingPledges}
+                  userHasPledged={userHasPledged}
+                />
                 <p className="text-center text-xs text-zinc-400">
                   You&apos;ll only be charged if the show is confirmed.
                 </p>
