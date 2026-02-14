@@ -18,7 +18,13 @@ export function Footer() {
               href="/events"
               className="text-sm text-zinc-500 hover:text-zinc-900"
             >
-              Events
+              Shows
+            </Link>
+            <Link
+              href="/dream-show"
+              className="text-sm text-zinc-500 hover:text-zinc-900"
+            >
+              Dream Show
             </Link>
             <Link
               href="/#how-it-works"
@@ -28,10 +34,13 @@ export function Footer() {
             </Link>
           </nav>
 
-          <p className="text-sm text-zinc-400">
-            &copy; {new Date().getFullYear()} Demand A Band. All rights
-            reserved.
-          </p>
+          <div className="text-right">
+            <p className="text-sm text-zinc-400">
+              &copy; {new Date().getFullYear()} Demand A Band. All rights
+              reserved.
+            </p>
+            <p className="text-xs text-zinc-300">v0.2.0</p>
+          </div>
         </div>
       </div>
     </footer>

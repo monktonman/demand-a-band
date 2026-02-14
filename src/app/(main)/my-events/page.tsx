@@ -99,9 +99,9 @@ export default async function MyEventsPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">My Events</h1>
+        <h1 className="text-3xl font-bold">My Shows</h1>
         <p className="mt-1 text-zinc-500">
-          Track your pledged events and discover new shows
+          Track your pledged shows and discover new ones
         </p>
       </div>
 
@@ -112,7 +112,7 @@ export default async function MyEventsPage() {
             <Ticket className="h-8 w-8 text-orange-600" />
             <div>
               <p className="text-2xl font-bold">{activePledges.length}</p>
-              <p className="text-xs text-zinc-500">Active Events</p>
+              <p className="text-xs text-zinc-500">Active Shows</p>
             </div>
           </CardContent>
         </Card>
@@ -294,13 +294,13 @@ export default async function MyEventsPage() {
       {pledges.length === 0 && (
         <div className="py-16 text-center">
           <Ticket className="mx-auto mb-4 h-16 w-16 text-zinc-200" />
-          <h2 className="text-2xl font-bold text-zinc-700">No events yet</h2>
+          <h2 className="text-2xl font-bold text-zinc-700">No shows yet</h2>
           <p className="mt-2 text-zinc-500 max-w-md mx-auto">
-            Browse upcoming events and pledge your support to make shows happen in Baltimore!
+            Browse proposed shows and pledge your support to make them happen in Baltimore!
           </p>
           <Link href="/events">
             <Button className="mt-6 bg-orange-600 hover:bg-orange-700" size="lg">
-              Browse Events
+              Browse Shows
             </Button>
           </Link>
         </div>

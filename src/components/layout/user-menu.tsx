@@ -60,7 +60,7 @@ export function UserMenu({ user }: UserMenuProps) {
         <DropdownMenuItem asChild>
           <Link href="/my-events" className="cursor-pointer">
             <Ticket className="mr-2 h-4 w-4" />
-            My Events
+            My Shows
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

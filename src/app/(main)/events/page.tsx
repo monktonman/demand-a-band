@@ -20,9 +20,9 @@ export default async function EventsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Upcoming Events</h1>
+        <h1 className="text-3xl font-bold">Proposed Shows</h1>
         <p className="mt-2 text-zinc-500">
-          Browse proposed events and pledge your support to make them happen.
+          Browse proposed shows and pledge your support to make them happen.
         </p>
       </div>
 
@@ -36,10 +36,10 @@ export default async function EventsPage() {
         <div className="py-24 text-center">
           <Music className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
           <h2 className="text-xl font-semibold text-zinc-700">
-            No events yet
+            No shows yet
           </h2>
           <p className="mt-2 text-zinc-500">
-            Events will appear here once we have enough demand to propose shows.
+            Proposed shows will appear here once we have enough demand.
             Make sure you&apos;ve completed your onboarding preferences!
           </p>
         </div>

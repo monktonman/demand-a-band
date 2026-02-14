@@ -81,9 +81,9 @@ export default async function HomePage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full border-zinc-600 text-base text-zinc-300 hover:bg-zinc-800 hover:text-white sm:w-auto"
+                  className="w-full border-zinc-600 bg-transparent text-base text-zinc-300 hover:bg-zinc-800 hover:text-white sm:w-auto"
                 >
-                  Browse Events
+                  Browse Shows
                 </Button>
               </Link>
             </div>
@@ -177,10 +177,10 @@ export default async function HomePage() {
                 Live Now
               </Badge>
               <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
-                Events looking for pledges
+                Shows looking for pledges
               </h2>
               <p className="mt-4 text-lg text-zinc-600">
-                These shows are waiting for enough fans. Pledge now to make
+                These proposed shows need enough fans to go live. Pledge now to make
                 them happen.
               </p>
             </div>
@@ -242,7 +242,7 @@ export default async function HomePage() {
             <div className="mt-8 text-center">
               <Link href="/events">
                 <Button variant="outline" size="lg">
-                  View All Events
+                  View All Shows
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -305,11 +305,11 @@ export default async function HomePage() {
               ))}
             </div>
 
-            <Link href="/register">
+            <Link href="/dream-show">
               <Button
                 size="lg"
                 variant="outline"
-                className="mt-8 border-white text-base text-white hover:bg-white hover:text-orange-600"
+                className="mt-8 border-white bg-transparent text-base text-white hover:bg-white hover:text-orange-600"
               >
                 Tell us your dream show
                 <ArrowRight className="ml-2 h-4 w-4" />

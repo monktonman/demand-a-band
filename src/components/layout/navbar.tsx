@@ -35,14 +35,20 @@ export function Navbar() {
             href="/events"
             className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
           >
-            Events
+            Shows
+          </Link>
+          <Link
+            href="/dream-show"
+            className="text-sm font-medium text-orange-600 transition-colors hover:text-orange-700"
+          >
+            Dream Show
           </Link>
           {session && (
             <Link
               href="/my-events"
               className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
             >
-              My Events
+              My Shows
             </Link>
           )}
           {session?.user?.role === "ADMIN" && (
