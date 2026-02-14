@@ -77,6 +77,17 @@ export function formatDateRange(start: Date | string, end: Date | string): strin
   return `${monthShort.format(s)} ${dayNum.format(s)}, ${s.getFullYear()} – ${monthShort.format(e)} ${dayNum.format(e)}, ${e.getFullYear()}`;
 }
 
+/**
+ * Generate a short random ID for shareable links.
+ * Uses URL-safe characters: lowercase + digits (no ambiguous chars like 0/O, 1/l).
+ */
+export function nanoid(length: number = 8): string {
+  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
+}
+
 export function getInitials(name: string): string {
   return name
     .split(" ")

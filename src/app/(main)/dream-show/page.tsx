@@ -16,6 +16,10 @@ import {
   Check,
   DollarSign,
   PartyPopper,
+  Copy,
+  MessageCircle,
+  Mail,
+  Share2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -57,8 +61,11 @@ export default function DreamShowPage() {
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
+  const [selectedPriceLabel, setSelectedPriceLabel] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shareCode, setShareCode] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // Load venues
   useEffect(() => {
@@ -112,6 +119,7 @@ export default function DreamShowPage() {
           venueId: selectedVenue.id,
           venueName: selectedVenue.name,
           maxTicketPrice: selectedPrice,
+          priceTierLabel: selectedPriceLabel,
         })
       );
       window.location.href = "/register";
@@ -120,66 +128,178 @@ export default function DreamShowPage() {
 
     setIsSubmitting(true);
     try {
-      // Save as a band preference with isDreamShow = true
-      const res = await fetch("/api/preferences", {
+      const res = await fetch("/api/dream-shows", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          preferences: [
-            {
-              bandId: selectedBand.id,
-              maxTicketPrice: selectedPrice,
-              isDreamShow: true,
-              priority: 1,
-            },
-          ],
+          bandId: selectedBand.id,
+          venueId: selectedVenue.id,
+          maxTicketPrice: selectedPrice,
+          priceTierLabel: selectedPriceLabel,
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.shareCode) {
+        setShareCode(data.shareCode);
+        setSubmitted(true);
+      } else {
+        // Fallback: still show success
         setSubmitted(true);
       }
     } catch {
-      // Still show success for now
       setSubmitted(true);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const shareUrl =
+    typeof window !== "undefined" && shareCode
+      ? `${window.location.origin}/dream-show/${shareCode}`
+      : "";
+
+  const shareText = selectedBand && selectedVenue
+    ? `I want to see ${selectedBand.name} at ${selectedVenue.name} (${selectedVenue.capacity} cap)! Opt in to help make it happen:`
+    : "";
+
+  const copyLink = async () => {
+    if (shareUrl) {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   if (submitted) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-amber-400">
-          <PartyPopper className="h-10 w-10 text-white" />
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        {/* Success header */}
+        <div className="text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-amber-400">
+            <PartyPopper className="h-10 w-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold">Dream Show Created!</h1>
+          <p className="mt-4 text-lg text-zinc-600">
+            <strong>{selectedBand?.name}</strong> at{" "}
+            <strong>{selectedVenue?.name}</strong>
+          </p>
         </div>
-        <h1 className="text-3xl font-bold">Dream Show Submitted!</h1>
-        <p className="mt-4 text-lg text-zinc-600">
-          You want to see <strong>{selectedBand?.name}</strong> at{" "}
-          <strong>{selectedVenue?.name}</strong> — we love it!
-        </p>
-        <p className="mt-2 text-zinc-500">
-          We&apos;re tracking demand for this dream show. When enough fans like you want it,
-          we&apos;ll work to make it happen.
-        </p>
-        <div className="mt-8 flex justify-center gap-3">
+
+        {/* Share CTA - this is the key viral moment */}
+        {shareCode && (
+          <Card className="mt-8 border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50">
+            <CardContent className="p-6">
+              <div className="text-center mb-4">
+                <Share2 className="mx-auto mb-2 h-6 w-6 text-orange-600" />
+                <h2 className="text-xl font-bold">Now rally your friends!</h2>
+                <p className="mt-1 text-sm text-zinc-600">
+                  The more fans who opt in, the more likely we can make this happen.
+                  Share your dream show link:
+                </p>
+              </div>
+
+              {/* Share URL */}
+              <div className="flex items-center gap-2 rounded-lg bg-white border border-zinc-200 p-2 mb-4">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareUrl}
+                  className="flex-1 bg-transparent text-sm text-zinc-700 outline-none px-2 truncate"
+                />
+                <Button
+                  onClick={copyLink}
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-1 h-3 w-3 text-green-600" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-1 h-3 w-3" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Share buttons */}
+              <div className="grid grid-cols-3 gap-3">
+                <Button
+                  variant="outline"
+                  asChild
+                  className="h-auto flex-col gap-1.5 py-3 bg-white"
+                >
+                  <a
+                    href={`sms:&body=${encodeURIComponent(shareText + " " + shareUrl)}`}
+                  >
+                    <MessageCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-xs">Text</span>
+                  </a>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  asChild
+                  className="h-auto flex-col gap-1.5 py-3 bg-white"
+                >
+                  <a
+                    href={`mailto:?subject=${encodeURIComponent(`Dream Show: ${selectedBand?.name} at ${selectedVenue?.name}`)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`}
+                  >
+                    <Mail className="h-5 w-5 text-blue-600" />
+                    <span className="text-xs">Email</span>
+                  </a>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  asChild
+                  className="h-auto flex-col gap-1.5 py-3 bg-white"
+                >
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    <span className="text-xs">X / Twitter</span>
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* View & Build Another */}
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          {shareCode && (
+            <Link href={`/dream-show/${shareCode}`}>
+              <Button className="bg-orange-600 hover:bg-orange-700">
+                View Your Dream Show Page
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          )}
           <Button
             onClick={() => {
               setSubmitted(false);
               setSelectedBand(null);
               setSelectedVenue(null);
               setSelectedPrice(null);
+              setSelectedPriceLabel("");
+              setShareCode("");
               setStep(1);
             }}
             variant="outline"
           >
             Build Another Dream Show
           </Button>
-          <Link href="/events">
-            <Button className="bg-orange-600 hover:bg-orange-700">
-              Browse Live Events
-            </Button>
-          </Link>
         </div>
       </div>
     );
@@ -403,7 +523,7 @@ export default function DreamShowPage() {
             {PRICE_TIERS.map((tier) => (
               <button
                 key={tier.value}
-                onClick={() => setSelectedPrice(tier.value)}
+                onClick={() => { setSelectedPrice(tier.value); setSelectedPriceLabel(tier.label); }}
                 className={`flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition-all hover:shadow-md ${
                   selectedPrice === tier.value
                     ? "border-orange-500 bg-orange-50"

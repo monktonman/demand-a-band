@@ -30,6 +30,8 @@ model User {
   cityPreferences UserCityPreference[]
   pledges         Pledge[]
   notifications   Notification[]
+  dreamShows      DreamShow[]      @relation("dreamShowCreator")
+  dreamShowVotes  DreamShowVote[]  @relation("dreamShowVoter")
 }
 
 enum UserRole {
@@ -91,6 +93,7 @@ model Band {
 
   userPreferences UserBandPreference[]
   events          Event[]
+  dreamShows      DreamShow[]
 }
 
 // ============================================
@@ -152,7 +155,8 @@ model Venue {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
-  events Event[]
+  events     Event[]
+  dreamShows DreamShow[]
 }
 
 enum VenueOwnership {
@@ -241,6 +245,47 @@ enum PledgeStatus {
   CHARGED
   REFUNDED
   CANCELLED
+}
+
+// ============================================
+// DREAM SHOWS (social demand building)
+// ============================================
+
+model DreamShow {
+  id             String   @id @default(cuid())
+  shareCode      String   @unique
+  creatorId      String
+  bandId         String
+  venueId        String
+  maxTicketPrice Decimal  @db.Decimal(10, 2)
+  priceTierLabel String   // e.g., "$200–500"
+  message        String?  @db.Text  // optional personal pitch
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  creator User           @relation("dreamShowCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  band    Band           @relation(fields: [bandId], references: [id])
+  venue   Venue          @relation(fields: [venueId], references: [id])
+  votes   DreamShowVote[]
+
+  @@index([shareCode])
+  @@index([bandId])
+  @@index([creatorId])
+}
+
+model DreamShowVote {
+  id          String   @id @default(cuid())
+  dreamShowId String
+  userId      String?  // null if anonymous / not logged in
+  voterName   String?  // for display even if anon
+  voterEmail  String?  // optional contact
+  createdAt   DateTime @default(now())
+
+  dreamShow DreamShow @relation(fields: [dreamShowId], references: [id], onDelete: Cascade)
+  user      User?     @relation("dreamShowVoter", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([dreamShowId, userId])
+  @@index([dreamShowId])
 }
 
 // ============================================
