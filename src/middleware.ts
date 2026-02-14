@@ -1,7 +1,34 @@
 import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export default withAuth(
+// Beta gate paths that should bypass the gate
+const betaBypassPaths = ["/beta", "/api/beta", "/_next", "/favicon.ico"];
+
+function isBetaBypass(pathname: string): boolean {
+  return betaBypassPaths.some((p) => pathname.startsWith(p));
+}
+
+// Check beta gate before anything else
+function checkBetaGate(req: NextRequest): NextResponse | null {
+  const betaCode = process.env.BETA_ACCESS_CODE;
+
+  // If no beta code configured, gate is disabled — let everyone through
+  if (!betaCode) return null;
+
+  const { pathname } = req.nextUrl;
+
+  // Always allow beta page and its API
+  if (isBetaBypass(pathname)) return null;
+
+  // Check for beta cookie
+  const betaCookie = req.cookies.get("beta_access");
+  if (betaCookie?.value === "granted") return null;
+
+  // Redirect to beta gate
+  return NextResponse.redirect(new URL("/beta", req.url));
+}
+
+const authMiddleware = withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
@@ -37,7 +64,7 @@ export default withAuth(
         const { pathname } = req.nextUrl;
 
         // Public routes that don't require auth
-        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows"];
+        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows", "/beta", "/api/beta"];
         if (publicPaths.some((p) => pathname.startsWith(p))) {
           return true;
         }
@@ -48,6 +75,15 @@ export default withAuth(
     },
   }
 );
+
+export default function middleware(req: NextRequest) {
+  // Check beta gate first
+  const betaResponse = checkBetaGate(req);
+  if (betaResponse) return betaResponse;
+
+  // Then run auth middleware
+  return (authMiddleware as unknown as (req: NextRequest) => NextResponse)(req);
+}
 
 export const config = {
   matcher: [
