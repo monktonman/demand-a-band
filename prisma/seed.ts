@@ -394,8 +394,299 @@ async function main() {
   }
   console.log(`✅ ${bands.length} bands seeded`);
 
+  // ============================================
+  // SAMPLE USERS (for realistic demo)
+  // ============================================
+  const demoPassword = await bcrypt.hash("demo123!", 12);
+  const sampleUsers = [
+    { email: "sarah@example.com", name: "Sarah Johnson" },
+    { email: "mike@example.com", name: "Mike Chen" },
+    { email: "emma@example.com", name: "Emma Williams" },
+    { email: "james@example.com", name: "James Rodriguez" },
+    { email: "olivia@example.com", name: "Olivia Park" },
+    { email: "noah@example.com", name: "Noah Thompson" },
+    { email: "ava@example.com", name: "Ava Martinez" },
+    { email: "liam@example.com", name: "Liam O'Brien" },
+    { email: "sophia@example.com", name: "Sophia Kim" },
+    { email: "ethan@example.com", name: "Ethan Davis" },
+    { email: "mia@example.com", name: "Mia Brown" },
+    { email: "lucas@example.com", name: "Lucas Garcia" },
+    { email: "charlotte@example.com", name: "Charlotte Lee" },
+    { email: "aiden@example.com", name: "Aiden Taylor" },
+    { email: "harper@example.com", name: "Harper Wilson" },
+  ];
+
+  const createdUsers = [];
+  for (const user of sampleUsers) {
+    const created = await prisma.user.upsert({
+      where: { email: user.email },
+      update: {},
+      create: {
+        email: user.email,
+        name: user.name,
+        hashedPassword: demoPassword,
+        role: "FAN",
+        onboarded: true,
+        emailVerified: new Date(),
+      },
+    });
+    createdUsers.push(created);
+  }
+  console.log(`✅ ${sampleUsers.length} demo users created`);
+
+  // ============================================
+  // SAMPLE BAND PREFERENCES (demand signals)
+  // ============================================
+  const allBands = await prisma.band.findMany();
+  const bandsBySlug = new Map(allBands.map((b) => [b.slug, b]));
+
+  // Create realistic preference distributions
+  const popularBandSlugs = [
+    "phoebe-bridgers", "bon-iver", "hozier", "japanese-breakfast",
+    "the-war-on-drugs", "tyler-childers", "big-thief", "beach-house",
+    "khruangbin", "boygenius", "maggie-rogers", "billy-strings",
+    "the-national", "fleet-foxes", "turnstile", "fontaines-dc",
+    "snail-mail", "pinegrove", "waxahatchee", "future-islands",
+  ];
+
+  const dreamShowSlugs = [
+    "radiohead", "foo-fighters", "taylor-swift", "kendrick-lamar",
+    "bruce-springsteen", "pearl-jam", "billie-eilish",
+  ];
+
+  let prefCount = 0;
+  for (const user of createdUsers) {
+    // Each user picks 3-8 random bands
+    const shuffled = [...popularBandSlugs].sort(() => Math.random() - 0.5);
+    const numBands = 3 + Math.floor(Math.random() * 6);
+    const selectedBands = shuffled.slice(0, numBands);
+
+    let priority = 1;
+    for (const slug of selectedBands) {
+      const band = bandsBySlug.get(slug);
+      if (!band) continue;
+
+      const maxPrice = [30, 40, 50, 60, 75, 100][Math.floor(Math.random() * 6)];
+
+      await prisma.userBandPreference.upsert({
+        where: {
+          userId_bandId: { userId: user.id, bandId: band.id },
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          bandId: band.id,
+          maxTicketPrice: maxPrice,
+          priority: priority++,
+          isDreamShow: false,
+        },
+      });
+      prefCount++;
+    }
+
+    // 60% of users also pick 1-2 dream shows
+    if (Math.random() < 0.6) {
+      const dreamShuffled = [...dreamShowSlugs].sort(() => Math.random() - 0.5);
+      const numDream = 1 + Math.floor(Math.random() * 2);
+
+      for (const slug of dreamShuffled.slice(0, numDream)) {
+        const band = bandsBySlug.get(slug);
+        if (!band) continue;
+
+        const dreamPrice = [200, 300, 500, 750, 1000][Math.floor(Math.random() * 5)];
+
+        await prisma.userBandPreference.upsert({
+          where: {
+            userId_bandId: { userId: user.id, bandId: band.id },
+          },
+          update: {},
+          create: {
+            userId: user.id,
+            bandId: band.id,
+            maxTicketPrice: dreamPrice,
+            priority: priority++,
+            isDreamShow: true,
+          },
+        });
+        prefCount++;
+      }
+    }
+
+    // City preferences
+    await prisma.userCityPreference.upsert({
+      where: {
+        userId_city_state: { userId: user.id, city: "Baltimore", state: "MD" },
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        city: "Baltimore",
+        state: "MD",
+        maxRadius: 25 + Math.floor(Math.random() * 50),
+      },
+    });
+  }
+  console.log(`✅ ${prefCount} band preferences created`);
+
+  // ============================================
+  // SAMPLE EVENTS (shows users can pledge for)
+  // ============================================
+  const allVenues = await prisma.venue.findMany();
+  const venuesBySlug = new Map(allVenues.map((v) => [v.slug, v]));
+
+  const sampleEvents = [
+    {
+      bandSlug: "japanese-breakfast",
+      venueSlug: "ottobar",
+      ticketPrice: 35,
+      minPledges: 150,
+      daysFromNow: 45,
+      deadlineDaysFromNow: 21,
+    },
+    {
+      bandSlug: "khruangbin",
+      venueSlug: "rams-head-live",
+      ticketPrice: 55,
+      minPledges: 400,
+      daysFromNow: 60,
+      deadlineDaysFromNow: 30,
+    },
+    {
+      bandSlug: "turnstile",
+      venueSlug: "baltimore-soundstage",
+      ticketPrice: 40,
+      minPledges: 300,
+      daysFromNow: 50,
+      deadlineDaysFromNow: 25,
+    },
+    {
+      bandSlug: "phoebe-bridgers",
+      venueSlug: "rams-head-on-stage",
+      ticketPrice: 65,
+      minPledges: 100,
+      daysFromNow: 55,
+      deadlineDaysFromNow: 28,
+    },
+    {
+      bandSlug: "billy-strings",
+      venueSlug: "the-8x10",
+      ticketPrice: 50,
+      minPledges: 100,
+      daysFromNow: 40,
+      deadlineDaysFromNow: 18,
+    },
+    {
+      bandSlug: "big-thief",
+      venueSlug: "creative-alliance",
+      ticketPrice: 45,
+      minPledges: 80,
+      daysFromNow: 70,
+      deadlineDaysFromNow: 35,
+    },
+  ];
+
+  const createdEvents = [];
+  for (const eventData of sampleEvents) {
+    const band = bandsBySlug.get(eventData.bandSlug);
+    const venue = venuesBySlug.get(eventData.venueSlug);
+    if (!band || !venue) continue;
+
+    const eventDate = new Date();
+    eventDate.setDate(eventDate.getDate() + eventData.daysFromNow);
+    eventDate.setHours(20, 0, 0, 0);
+
+    const deadlineDate = new Date();
+    deadlineDate.setDate(deadlineDate.getDate() + eventData.deadlineDaysFromNow);
+    deadlineDate.setHours(23, 59, 59, 0);
+
+    const doorsTime = new Date(eventDate);
+    doorsTime.setHours(19, 0, 0, 0);
+
+    const slug = `${band.slug}-at-${venue.slug}-${eventDate.getFullYear()}`;
+    const title = `${band.name} at ${venue.name}`;
+    const serviceFee = eventData.ticketPrice < 15 ? 3.5 : Math.round(eventData.ticketPrice * 0.12 * 100) / 100;
+
+    const event = await prisma.event.upsert({
+      where: { slug },
+      update: {},
+      create: {
+        bandId: band.id,
+        venueId: venue.id,
+        title,
+        slug,
+        description: `An intimate evening with ${band.name} at ${venue.name}. ${band.genres.slice(0, 2).join(" / ")} at its finest.`,
+        eventDate,
+        doorsTime,
+        showTime: eventDate,
+        ticketPrice: eventData.ticketPrice,
+        serviceFee,
+        minPledges: eventData.minPledges,
+        maxCapacity: venue.capacity,
+        pledgeDeadline: deadlineDate,
+        status: "PROPOSED",
+      },
+    });
+    createdEvents.push(event);
+  }
+  console.log(`✅ ${createdEvents.length} sample events created`);
+
+  // ============================================
+  // SAMPLE PLEDGES (make events look active)
+  // ============================================
+  let pledgeCount = 0;
+  for (const event of createdEvents) {
+    // 30-70% of users pledge for each event
+    const pledgeRatio = 0.3 + Math.random() * 0.4;
+    const numPledgers = Math.floor(createdUsers.length * pledgeRatio);
+    const shuffledUsers = [...createdUsers].sort(() => Math.random() - 0.5);
+
+    for (const user of shuffledUsers.slice(0, numPledgers)) {
+      const eventDetails = await prisma.event.findUnique({
+        where: { id: event.id },
+      });
+      if (!eventDetails) continue;
+
+      const ticketPrice = Number(eventDetails.ticketPrice);
+      const serviceFee = Number(eventDetails.serviceFee);
+      const quantity = Math.random() < 0.3 ? 2 : 1; // 30% get 2 tickets
+      const totalAmount = (ticketPrice + serviceFee) * quantity;
+
+      try {
+        await prisma.pledge.upsert({
+          where: {
+            userId_eventId: { userId: user.id, eventId: event.id },
+          },
+          update: {},
+          create: {
+            userId: user.id,
+            eventId: event.id,
+            quantity,
+            totalAmount,
+            status: "ACTIVE",
+          },
+        });
+        pledgeCount++;
+      } catch {
+        // Skip if duplicate
+      }
+    }
+
+    // Update event status if threshold met
+    const pledgeTotal = await prisma.pledge.count({
+      where: { eventId: event.id },
+    });
+    if (pledgeTotal >= event.minPledges) {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { status: "THRESHOLD_MET" },
+      });
+    }
+  }
+  console.log(`✅ ${pledgeCount} sample pledges created`);
+
   console.log("\n🎶 Seeding complete! Database is ready.\n");
   console.log("Admin login: admin@demandaband.com / admin123!");
+  console.log("Demo user login: sarah@example.com / demo123!");
 }
 
 main()
