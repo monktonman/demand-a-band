@@ -365,6 +365,8 @@ async function main() {
             genres: band.genres,
             popularity: band.popularity,
             monthlyListeners: band.monthlyListeners ?? null,
+            spotifyId: band.spotifyId ?? null,
+            spotifyUrl: band.spotifyId ? `https://open.spotify.com/artist/${band.spotifyId}` : null,
           },
           create: {
             name: band.name,
@@ -372,6 +374,8 @@ async function main() {
             genres: band.genres,
             popularity: band.popularity,
             monthlyListeners: band.monthlyListeners ?? null,
+            spotifyId: band.spotifyId ?? null,
+            spotifyUrl: band.spotifyId ? `https://open.spotify.com/artist/${band.spotifyId}` : null,
           },
         })
       )
