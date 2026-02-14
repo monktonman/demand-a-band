@@ -59,6 +59,24 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+export function formatDateRange(start: Date | string, end: Date | string): string {
+  const s = new Date(start);
+  const e = new Date(end);
+  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+  const sameYear = s.getFullYear() === e.getFullYear();
+
+  const monthShort = new Intl.DateTimeFormat("en-US", { month: "short" });
+  const dayNum = new Intl.DateTimeFormat("en-US", { day: "numeric" });
+
+  if (sameMonth) {
+    return `${monthShort.format(s)} ${dayNum.format(s)}–${dayNum.format(e)}, ${s.getFullYear()}`;
+  }
+  if (sameYear) {
+    return `${monthShort.format(s)} ${dayNum.format(s)} – ${monthShort.format(e)} ${dayNum.format(e)}, ${s.getFullYear()}`;
+  }
+  return `${monthShort.format(s)} ${dayNum.format(s)}, ${s.getFullYear()} – ${monthShort.format(e)} ${dayNum.format(e)}, ${e.getFullYear()}`;
+}
+
 export function getInitials(name: string): string {
   return name
     .split(" ")

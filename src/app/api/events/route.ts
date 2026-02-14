@@ -48,6 +48,8 @@ export async function POST(req: Request) {
         title: validatedData.title,
         slug,
         description: validatedData.description || "",
+        windowStart: validatedData.windowStart ? new Date(validatedData.windowStart) : null,
+        windowEnd: validatedData.windowEnd ? new Date(validatedData.windowEnd) : null,
         eventDate: new Date(validatedData.eventDate),
         doorsTime: validatedData.doorsTime ? new Date(validatedData.doorsTime) : null,
         showTime: validatedData.showTime ? new Date(validatedData.showTime) : null,

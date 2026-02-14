@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
   Calendar,
+  CalendarRange,
   MapPin,
   Users,
   Music2,
   Clock,
   ArrowLeft,
 } from "lucide-react";
-import { formatCurrency, formatDate, formatTime } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateRange, formatTime } from "@/lib/utils";
 import { EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "@/lib/constants";
 import { PledgeButton } from "@/components/events/pledge-button";
 import Link from "next/link";
@@ -134,22 +135,43 @@ export default async function EventDetailPage({
 
               <Separator />
 
-              <div className="flex items-start gap-3">
-                <Calendar className="mt-0.5 h-5 w-5 text-zinc-400" />
-                <div>
-                  <p className="font-medium">{formatDate(event.eventDate)}</p>
-                  {event.doorsTime && (
-                    <p className="text-sm text-zinc-500">
-                      Doors: {formatTime(event.doorsTime)}
+              {/* Date window or confirmed date */}
+              {event.windowStart && event.windowEnd && event.status !== "CONFIRMED" && event.status !== "COMPLETED" ? (
+                <div className="flex items-start gap-3">
+                  <CalendarRange className="mt-0.5 h-5 w-5 text-orange-500" />
+                  <div>
+                    <p className="font-medium text-orange-700">
+                      Availability Window
                     </p>
-                  )}
-                  {event.showTime && (
-                    <p className="text-sm text-zinc-500">
-                      Show: {formatTime(event.showTime)}
+                    <p className="text-sm font-medium">
+                      {formatDateRange(event.windowStart, event.windowEnd)}
                     </p>
-                  )}
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Target date: {formatDate(event.eventDate)}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      Exact date confirmed once the show is locked in
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <Calendar className="mt-0.5 h-5 w-5 text-zinc-400" />
+                  <div>
+                    <p className="font-medium">{formatDate(event.eventDate)}</p>
+                    {event.doorsTime && (
+                      <p className="text-sm text-zinc-500">
+                        Doors: {formatTime(event.doorsTime)}
+                      </p>
+                    )}
+                    {event.showTime && (
+                      <p className="text-sm text-zinc-500">
+                        Show: {formatTime(event.showTime)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <Separator />
 

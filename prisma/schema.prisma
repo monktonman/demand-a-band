@@ -172,6 +172,10 @@ model Event {
   title          String
   slug           String      @unique
   description    String?     @db.Text
+  // Availability window — the range of dates the band+venue are available
+  windowStart    DateTime?
+  windowEnd      DateTime?
+  // Final confirmed date (set when event is confirmed; initially a target/estimate)
   eventDate      DateTime
   doorsTime      DateTime?
   showTime       DateTime?

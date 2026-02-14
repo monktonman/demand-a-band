@@ -41,6 +41,8 @@ export const createEventSchema = z.object({
   venueId: z.string(),
   title: z.string().min(3),
   description: z.string().optional(),
+  windowStart: z.string().or(z.date()).optional(),
+  windowEnd: z.string().or(z.date()).optional(),
   eventDate: z.string().or(z.date()),
   doorsTime: z.string().or(z.date()).optional(),
   showTime: z.string().or(z.date()).optional(),

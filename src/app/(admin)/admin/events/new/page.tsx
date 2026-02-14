@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, CalendarRange, Info } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, calculateServiceFee } from "@/lib/utils";
 
@@ -42,6 +42,8 @@ export default function CreateEventPage() {
     venueId: "",
     title: "",
     description: "",
+    windowStart: "",
+    windowEnd: "",
     eventDate: "",
     doorsTime: "",
     showTime: "",
@@ -217,18 +219,63 @@ export default function CreateEventPage() {
 
         <Card>
           <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarRange className="h-5 w-5 text-orange-600" />
+              Availability Window
+            </CardTitle>
+            <CardDescription>
+              The date range when the band and venue are both available.
+              Fans will see this window — the exact date is locked in when the event is confirmed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 mt-0.5 text-blue-600" />
+                <p className="text-xs text-blue-700">
+                  Set the window to the range of dates both the band and venue are available.
+                  The &quot;Target Date&quot; below is shown as an estimate — it becomes the confirmed date once the event is locked in.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Window Start</Label>
+                <Input
+                  type="date"
+                  value={formData.windowStart}
+                  onChange={(e) => updateField("windowStart", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Window End</Label>
+                <Input
+                  type="date"
+                  value={formData.windowEnd}
+                  onChange={(e) => updateField("windowEnd", e.target.value)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Schedule & Pricing</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Event Date</Label>
+                <Label>Target Event Date</Label>
                 <Input
                   type="datetime-local"
                   value={formData.eventDate}
                   onChange={(e) => updateField("eventDate", e.target.value)}
                   required
                 />
+                <p className="text-xs text-zinc-400">
+                  Shown as estimate until confirmed
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Pledge Deadline</Label>

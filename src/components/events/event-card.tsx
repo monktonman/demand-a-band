@@ -8,8 +8,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Users, Music2 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { Calendar, CalendarRange, MapPin, Users, Music2 } from "lucide-react";
+import { formatCurrency, formatDate, formatDateRange } from "@/lib/utils";
 import { EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "@/lib/constants";
 import type { Band, Venue, EventStatus } from "@prisma/client";
 
@@ -19,6 +19,8 @@ interface EventCardProps {
     slug: string;
     title: string;
     status: EventStatus;
+    windowStart?: Date | null;
+    windowEnd?: Date | null;
     eventDate: Date;
     ticketPrice: unknown; // Prisma Decimal
     serviceFee: unknown;
@@ -38,6 +40,8 @@ export function EventCard({ event }: EventCardProps) {
   );
   const ticketPrice = Number(event.ticketPrice);
   const serviceFee = Number(event.serviceFee);
+  const hasWindow = event.windowStart && event.windowEnd;
+  const isConfirmed = event.status === "CONFIRMED" || event.status === "COMPLETED";
 
   return (
     <Link href={`/events/${event.slug}`}>
@@ -73,10 +77,19 @@ export function EventCard({ event }: EventCardProps) {
                 {event.venue.name} - {event.venue.city}, {event.venue.state}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3.5 w-3.5 text-zinc-400" />
-              <span>{formatDate(event.eventDate)}</span>
-            </div>
+            {hasWindow && !isConfirmed ? (
+              <div className="flex items-center gap-2">
+                <CalendarRange className="h-3.5 w-3.5 text-orange-400" />
+                <span className="text-orange-700 font-medium text-xs">
+                  {formatDateRange(event.windowStart!, event.windowEnd!)}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+                <span>{formatDate(event.eventDate)}</span>
+              </div>
+            )}
           </div>
 
           {/* Price */}

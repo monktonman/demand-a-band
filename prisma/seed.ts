@@ -566,6 +566,12 @@ async function main() {
     eventDate.setDate(eventDate.getDate() + eventData.daysFromNow);
     eventDate.setHours(20, 0, 0, 0);
 
+    // Availability window: ~2 weeks around the target date
+    const windowStart = new Date(eventDate);
+    windowStart.setDate(windowStart.getDate() - 7);
+    const windowEnd = new Date(eventDate);
+    windowEnd.setDate(windowEnd.getDate() + 14);
+
     const deadlineDate = new Date();
     deadlineDate.setDate(deadlineDate.getDate() + eventData.deadlineDaysFromNow);
     deadlineDate.setHours(23, 59, 59, 0);
@@ -586,6 +592,8 @@ async function main() {
         title,
         slug,
         description: `An intimate evening with ${band.name} at ${venue.name}. ${band.genres.slice(0, 2).join(" / ")} at its finest.`,
+        windowStart,
+        windowEnd,
         eventDate,
         doorsTime,
         showTime: eventDate,

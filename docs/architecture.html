@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demand A Band — Platform Architecture</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #fafafa; color: #18181b; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+    h1 { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: 8px; }
+    .subtitle { text-align: center; color: #71717a; margin-bottom: 48px; font-size: 1.1rem; }
+    .accent { color: #ea580c; }
+
+    /* Section headers */
+    .section-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title .icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; }
+
+    /* Diagram container */
+    .diagram { display: grid; grid-template-columns: 1fr; gap: 32px; margin-bottom: 48px; }
+
+    /* Architecture layers */
+    .layer { background: white; border-radius: 12px; border: 1px solid #e4e4e7; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .layer-header { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #a1a1aa; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .layer-header .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* Component boxes */
+    .components { display: flex; flex-wrap: wrap; gap: 12px; }
+    .component { background: #f4f4f5; border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 200px; border: 1px solid #e4e4e7; transition: all 0.2s; }
+    .component:hover { border-color: #ea580c; box-shadow: 0 2px 8px rgba(234,88,12,0.1); }
+    .component-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+    .component-desc { font-size: 0.78rem; color: #71717a; line-height: 1.4; }
+    .component-tech { display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.65rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-top: 6px; }
+
+    /* Flow arrows */
+    .flow-section { margin-bottom: 48px; }
+    .flow { display: flex; align-items: stretch; gap: 0; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
+    .flow-step { background: white; border: 2px solid #e4e4e7; border-radius: 10px; padding: 16px; min-width: 180px; flex: 1; position: relative; }
+    .flow-step.active { border-color: #ea580c; background: #fff7ed; }
+    .flow-arrow { display: flex; align-items: center; padding: 0 4px; color: #ea580c; font-size: 1.5rem; font-weight: bold; }
+    .flow-step-num { width: 24px; height: 24px; border-radius: 50%; background: #ea580c; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; margin-bottom: 8px; }
+    .flow-step h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    .flow-step p { font-size: 0.75rem; color: #71717a; line-height: 1.4; }
+
+    /* Data model */
+    .data-model { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .entity { background: white; border-radius: 10px; border: 2px solid #e4e4e7; overflow: hidden; }
+    .entity-header { background: #27272a; color: white; padding: 10px 16px; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; }
+    .entity-header .tag { background: #ea580c; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; }
+    .entity-fields { padding: 12px 16px; }
+    .field { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f4f4f5; font-size: 0.78rem; }
+    .field:last-child { border-bottom: none; }
+    .field-name { font-weight: 500; }
+    .field-type { color: #ea580c; font-family: monospace; font-size: 0.72rem; }
+    .field-key { color: #eab308; font-size: 0.65rem; font-weight: 600; margin-left: 4px; }
+
+    /* Relationships */
+    .relationships { margin-top: 24px; background: white; border-radius: 10px; border: 1px solid #e4e4e7; padding: 20px; }
+    .rel { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-size: 0.82rem; }
+    .rel-from, .rel-to { font-weight: 600; background: #f4f4f5; padding: 2px 8px; border-radius: 4px; }
+    .rel-type { color: #71717a; font-size: 0.75rem; }
+
+    /* Unit economics */
+    .economics { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .econ-card { background: white; border-radius: 10px; border: 1px solid #e4e4e7; padding: 20px; }
+    .econ-card h4 { font-weight: 700; margin-bottom: 12px; font-size: 0.95rem; }
+    .econ-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f4f4f5; font-size: 0.85rem; }
+    .econ-row:last-child { border-bottom: none; }
+    .econ-label { color: #71717a; }
+    .econ-value { font-weight: 600; }
+    .econ-value.highlight { color: #ea580c; }
+
+    /* Tech stack */
+    .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .tech-item { background: white; border: 1px solid #e4e4e7; border-radius: 8px; padding: 16px; text-align: center; }
+    .tech-item .name { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+    .tech-item .role { font-size: 0.78rem; color: #71717a; }
+    .tech-item .version { font-size: 0.65rem; color: #ea580c; font-weight: 600; margin-top: 4px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); justify-content: center; padding: 4px 0; }
+    }
+
+    hr { border: none; border-top: 1px solid #e4e4e7; margin: 48px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎸 <span class="accent">Demand A Band</span> — Platform Architecture</h1>
+    <p class="subtitle">Crowd-sourced reverse-auction concert booking platform · Baltimore MVP</p>
+
+    <!-- ============================================ -->
+    <!-- SYSTEM ARCHITECTURE -->
+    <!-- ============================================ -->
+    <div class="section-title">
+      <div class="icon" style="background:#ea580c">⚡</div>
+      System Architecture
+    </div>
+
+    <div class="diagram">
+      <!-- Frontend Layer -->
+      <div class="layer">
+        <div class="layer-header"><div class="dot" style="background:#3b82f6"></div> Frontend — Next.js 16 App Router</div>
+        <div class="components">
+          <div class="component">
+            <div class="component-name">Landing Page</div>
+            <div class="component-desc">Hero, how-it-works, featured events, dream shows, dynamic stats from DB</div>
+            <div class="component-tech">Server Component</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Artist Browser</div>
+            <div class="component-desc">1,000 bands · Card & list views · Search, genre filter, sort · Paginated</div>
+            <div class="component-tech">Client Component</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Events Browser</div>
+            <div class="component-desc">Grid of proposed/confirmed events · Pledge progress bars · Event detail pages</div>
+            <div class="component-tech">Server Component</div>
+          </div>
+          <div class="component">
+            <div class="component-name">My Events</div>
+            <div class="component-desc">User's active pledges, past pledges, recommended events based on preferences</div>
+            <div class="component-tech">Server Component</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Dashboard</div>
+            <div class="component-desc">Quick stats, pledge cards with progress, band preferences, city preferences</div>
+            <div class="component-tech">Server Component</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Onboarding</div>
+            <div class="component-desc">3-step wizard: band selection, dream shows, city preferences</div>
+            <div class="component-tech">Client Component</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Admin Panel</div>
+            <div class="component-desc">Demand dashboard, venues, events CRUD, user management, analytics charts</div>
+            <div class="component-tech">Server + Client</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Layer -->
+      <div class="layer">
+        <div class="layer-header"><div class="dot" style="background:#22c55e"></div> API Layer — Next.js Route Handlers</div>
+        <div class="components">
+          <div class="component">
+            <div class="component-name">/api/auth/*</div>
+            <div class="component-desc">NextAuth.js v4 · JWT sessions · Credentials provider · Register flow</div>
+            <div class="component-tech">NextAuth</div>
+          </div>
+          <div class="component">
+            <div class="component-name">/api/bands</div>
+            <div class="component-desc">Paginated band listing · Search · Genre filter · Sort by popularity/name/demand</div>
+            <div class="component-tech">Prisma</div>
+          </div>
+          <div class="component">
+            <div class="component-name">/api/events</div>
+            <div class="component-desc">Event listing with band/venue includes · Pledge counts</div>
+            <div class="component-tech">Prisma</div>
+          </div>
+          <div class="component">
+            <div class="component-name">/api/pledges</div>
+            <div class="component-desc">Create/cancel pledges · Threshold detection · Notification triggers</div>
+            <div class="component-tech">Prisma + Stripe</div>
+          </div>
+          <div class="component">
+            <div class="component-name">/api/setup-intent</div>
+            <div class="component-desc">Create Stripe SetupIntents · Save payment methods for delayed charging</div>
+            <div class="component-tech">Stripe SDK</div>
+          </div>
+          <div class="component">
+            <div class="component-name">/api/admin/*</div>
+            <div class="component-desc">Stats, venues CRUD, event confirm/cancel · Role-gated (ADMIN only)</div>
+            <div class="component-tech">Prisma + Stripe</div>
+          </div>
+          <div class="component">
+            <div class="component-name">/api/webhooks/stripe</div>
+            <div class="component-desc">payment_intent.succeeded/failed · setup_intent.succeeded · charge.refunded</div>
+            <div class="component-tech">Stripe Webhooks</div>
+          </div>
+          <div class="component">
+            <div class="component-name">/api/notifications</div>
+            <div class="component-desc">Get user notifications + unread count · Mark read (single or all)</div>
+            <div class="component-tech">Prisma</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Infrastructure Layer -->
+      <div class="layer">
+        <div class="layer-header"><div class="dot" style="background:#a855f7"></div> Infrastructure & Services</div>
+        <div class="components">
+          <div class="component">
+            <div class="component-name">Neon PostgreSQL</div>
+            <div class="component-desc">Serverless Postgres · Auto-scaling · Branching for dev/staging</div>
+            <div class="component-tech">Database</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Prisma 7</div>
+            <div class="component-desc">ORM with driver adapters · Type-safe queries · Migrations · Seeding</div>
+            <div class="component-tech">Data Layer</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Stripe</div>
+            <div class="component-desc">SetupIntents → PaymentIntents pattern · Save card now, charge on confirm</div>
+            <div class="component-tech">Payments</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Resend</div>
+            <div class="component-desc">Transactional email · Branded HTML templates · Graceful no-key fallback</div>
+            <div class="component-tech">Email</div>
+          </div>
+          <div class="component">
+            <div class="component-name">Vercel</div>
+            <div class="component-desc">Edge deployment · Auto-deploy from GitHub · Environment variables</div>
+            <div class="component-tech">Hosting</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ============================================ -->
+    <!-- USER FLOW -->
+    <!-- ============================================ -->
+    <div class="section-title">
+      <div class="icon" style="background:#3b82f6">🔄</div>
+      Core User Flow — Fan Journey
+    </div>
+
+    <div class="flow-section">
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-step-num">1</div>
+          <h4>Sign Up</h4>
+          <p>Register with email/password. JWT session created.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">2</div>
+          <h4>Onboarding</h4>
+          <p>Select favorite bands (from 1,000), mark dream shows, set city + radius.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">3</div>
+          <h4>Browse</h4>
+          <p>Explore artists catalog, view proposed events, see pledge progress.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step active">
+          <div class="flow-step-num">4</div>
+          <h4>Pledge</h4>
+          <p>Select quantity, save payment method (Stripe SetupIntent). No charge yet!</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">5</div>
+          <h4>Threshold Met</h4>
+          <p>Enough fans pledge → status changes. Notified via in-app + email.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">6</div>
+          <h4>Event Confirmed</h4>
+          <p>Admin confirms → cards charged via Stripe PaymentIntents. Tickets secured!</p>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ============================================ -->
+    <!-- ADMIN FLOW -->
+    <!-- ============================================ -->
+    <div class="section-title">
+      <div class="icon" style="background:#22c55e">👑</div>
+      Admin Flow — Event Lifecycle
+    </div>
+
+    <div class="flow-section">
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-step-num">1</div>
+          <h4>Analyze Demand</h4>
+          <p>Dashboard shows demand signals, band preference trends, geographic heat.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">2</div>
+          <h4>Create Event</h4>
+          <p>Select band + venue + date. Set ticket price, min pledges, deadline.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">3</div>
+          <h4>Monitor Pledges</h4>
+          <p>Watch pledge progress toward threshold. Send notifications at milestones.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step active">
+          <div class="flow-step-num">4</div>
+          <h4>Confirm / Cancel</h4>
+          <p>Confirm → charge all cards. Cancel → release all pledges. Both notify fans.</p>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ============================================ -->
+    <!-- DATA MODEL -->
+    <!-- ============================================ -->
+    <div class="section-title">
+      <div class="icon" style="background:#a855f7">🗄️</div>
+      Data Model
+    </div>
+
+    <div class="data-model">
+      <div class="entity">
+        <div class="entity-header">User <span class="tag">Core</span></div>
+        <div class="entity-fields">
+          <div class="field"><span class="field-name">id</span><span class="field-type">cuid <span class="field-key">PK</span></span></div>
+          <div class="field"><span class="field-name">email</span><span class="field-type">String (unique)</span></div>
+          <div class="field"><span class="field-name">name</span><span class="field-type">String?</span></div>
+          <div class="field"><span class="field-name">role</span><span class="field-type">FAN | ADMIN</span></div>
+          <div class="field"><span class="field-name">stripeCustomerId</span><span class="field-type">String?</span></div>
+          <div class="field"><span class="field-name">onboarded</span><span class="field-type">Boolean</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">Band <span class="tag">1,000</span></div>
+        <div class="entity-fields">
+          <div class="field"><span class="field-name">id</span><span class="field-type">cuid <span class="field-key">PK</span></span></div>
+          <div class="field"><span class="field-name">name</span><span class="field-type">String</span></div>
+          <div class="field"><span class="field-name">slug</span><span class="field-type">String (unique)</span></div>
+          <div class="field"><span class="field-name">genres</span><span class="field-type">String[]</span></div>
+          <div class="field"><span class="field-name">popularity</span><span class="field-type">Int (0-100)</span></div>
+          <div class="field"><span class="field-name">monthlyListeners</span><span class="field-type">Int?</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">Venue <span class="tag">17 Baltimore</span></div>
+        <div class="entity-fields">
+          <div class="field"><span class="field-name">id</span><span class="field-type">cuid <span class="field-key">PK</span></span></div>
+          <div class="field"><span class="field-name">name / slug</span><span class="field-type">String</span></div>
+          <div class="field"><span class="field-name">address, city, state</span><span class="field-type">String</span></div>
+          <div class="field"><span class="field-name">capacity</span><span class="field-type">Int (150-2000)</span></div>
+          <div class="field"><span class="field-name">venueType</span><span class="field-type">String</span></div>
+          <div class="field"><span class="field-name">ownership</span><span class="field-type">INDEP | CHAIN | NPO</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">Event <span class="tag">Core</span></div>
+        <div class="entity-fields">
+          <div class="field"><span class="field-name">id</span><span class="field-type">cuid <span class="field-key">PK</span></span></div>
+          <div class="field"><span class="field-name">bandId / venueId</span><span class="field-type"><span class="field-key">FK</span></span></div>
+          <div class="field"><span class="field-name">title / slug</span><span class="field-type">String</span></div>
+          <div class="field"><span class="field-name">ticketPrice / serviceFee</span><span class="field-type">Decimal</span></div>
+          <div class="field"><span class="field-name">minPledges / maxCapacity</span><span class="field-type">Int</span></div>
+          <div class="field"><span class="field-name">status</span><span class="field-type">PROPOSED → THRESHOLD_MET → CONFIRMED</span></div>
+          <div class="field"><span class="field-name">pledgeDeadline</span><span class="field-type">DateTime</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">Pledge <span class="tag">Core</span></div>
+        <div class="entity-fields">
+          <div class="field"><span class="field-name">id</span><span class="field-type">cuid <span class="field-key">PK</span></span></div>
+          <div class="field"><span class="field-name">userId / eventId</span><span class="field-type"><span class="field-key">FK</span> (unique pair)</span></div>
+          <div class="field"><span class="field-name">quantity</span><span class="field-type">Int (1-2)</span></div>
+          <div class="field"><span class="field-name">totalAmount</span><span class="field-type">Decimal</span></div>
+          <div class="field"><span class="field-name">status</span><span class="field-type">ACTIVE → CHARGED | CANCELLED</span></div>
+          <div class="field"><span class="field-name">stripePaymentIntentId</span><span class="field-type">String?</span></div>
+        </div>
+      </div>
+
+      <div class="entity">
+        <div class="entity-header">UserBandPreference <span class="tag">Demand Signal</span></div>
+        <div class="entity-fields">
+          <div class="field"><span class="field-name">userId / bandId</span><span class="field-type"><span class="field-key">FK</span> (unique pair)</span></div>
+          <div class="field"><span class="field-name">maxTicketPrice</span><span class="field-type">Decimal</span></div>
+          <div class="field"><span class="field-name">priority</span><span class="field-type">Int</span></div>
+          <div class="field"><span class="field-name">isDreamShow</span><span class="field-type">Boolean</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Relationships -->
+    <div class="relationships">
+      <strong style="display:block; margin-bottom: 12px; font-size: 0.85rem;">Key Relationships</strong>
+      <div class="rel">
+        <span class="rel-from">User</span>
+        <span class="rel-type">1 → N</span>
+        <span class="rel-to">Pledge</span>
+        <span style="color:#71717a; font-size:0.75rem; margin-left:8px">A user can pledge for many events</span>
+      </div>
+      <div class="rel">
+        <span class="rel-from">User</span>
+        <span class="rel-type">1 → N</span>
+        <span class="rel-to">UserBandPreference</span>
+        <span style="color:#71717a; font-size:0.75rem; margin-left:8px">Demand signals (3-10 bands per user)</span>
+      </div>
+      <div class="rel">
+        <span class="rel-from">Event</span>
+        <span class="rel-type">N → 1</span>
+        <span class="rel-to">Band</span>
+        <span style="color:#71717a; font-size:0.75rem; margin-left:8px">Each event features one band</span>
+      </div>
+      <div class="rel">
+        <span class="rel-from">Event</span>
+        <span class="rel-type">N → 1</span>
+        <span class="rel-to">Venue</span>
+        <span style="color:#71717a; font-size:0.75rem; margin-left:8px">Each event at one venue</span>
+      </div>
+      <div class="rel">
+        <span class="rel-from">Event</span>
+        <span class="rel-type">1 → N</span>
+        <span class="rel-to">Pledge</span>
+        <span style="color:#71717a; font-size:0.75rem; margin-left:8px">Many fans pledge per event</span>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ============================================ -->
+    <!-- UNIT ECONOMICS -->
+    <!-- ============================================ -->
+    <div class="section-title">
+      <div class="icon" style="background:#eab308">💰</div>
+      Unit Economics
+    </div>
+
+    <div class="economics">
+      <div class="econ-card">
+        <h4>Service Fee Model</h4>
+        <div class="econ-row">
+          <span class="econ-label">Under $15 ticket</span>
+          <span class="econ-value">$3.50 flat</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">$15+ ticket</span>
+          <span class="econ-value">12% of face value</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">$35 ticket example</span>
+          <span class="econ-value highlight">$4.20 fee</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">$65 ticket example</span>
+          <span class="econ-value highlight">$7.80 fee</span>
+        </div>
+      </div>
+
+      <div class="econ-card">
+        <h4>Example Event: $35 ticket × 150 fans</h4>
+        <div class="econ-row">
+          <span class="econ-label">Ticket revenue</span>
+          <span class="econ-value">$5,250</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">Service fees (12%)</span>
+          <span class="econ-value">$630</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">Stripe processing (~2.9%+30¢)</span>
+          <span class="econ-value" style="color:#ef4444">−$216</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">DAB net per event</span>
+          <span class="econ-value highlight">~$414</span>
+        </div>
+      </div>
+
+      <div class="econ-card">
+        <h4>Future: Radio Station Model</h4>
+        <div class="econ-row">
+          <span class="econ-label">Station gets</span>
+          <span class="econ-value">8-9% service fee</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">DAB platform fee</span>
+          <span class="econ-value">3-4% service fee</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">Station brings</span>
+          <span class="econ-value">Audience + relationships</span>
+        </div>
+        <div class="econ-row">
+          <span class="econ-label">DAB provides</span>
+          <span class="econ-value">Tech platform + payments</span>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- ============================================ -->
+    <!-- TECH STACK -->
+    <!-- ============================================ -->
+    <div class="section-title">
+      <div class="icon" style="background:#06b6d4">🛠️</div>
+      Tech Stack
+    </div>
+
+    <div class="tech-grid">
+      <div class="tech-item">
+        <div class="name">Next.js</div>
+        <div class="role">Full-stack React framework</div>
+        <div class="version">v16.1.6 (App Router)</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">TypeScript</div>
+        <div class="role">Type-safe development</div>
+        <div class="version">v5.x</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Tailwind CSS</div>
+        <div class="role">Utility-first styling</div>
+        <div class="version">v4.x</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">shadcn/ui</div>
+        <div class="role">Component library</div>
+        <div class="version">Radix-based</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Prisma</div>
+        <div class="role">ORM + Migrations</div>
+        <div class="version">v7.x (driver adapters)</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Neon</div>
+        <div class="role">Serverless PostgreSQL</div>
+        <div class="version">Managed</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">NextAuth.js</div>
+        <div class="role">Authentication</div>
+        <div class="version">v4 (JWT)</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Stripe</div>
+        <div class="role">Payment processing</div>
+        <div class="version">SetupIntent → PaymentIntent</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Resend</div>
+        <div class="role">Transactional email</div>
+        <div class="version">API-based</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Vercel</div>
+        <div class="role">Hosting + Edge</div>
+        <div class="version">Auto-deploy from GitHub</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Recharts</div>
+        <div class="role">Admin dashboard charts</div>
+        <div class="version">v2.x</div>
+      </div>
+      <div class="tech-item">
+        <div class="name">Lucide React</div>
+        <div class="role">Icon system</div>
+        <div class="version">v0.x</div>
+      </div>
+    </div>
+
+    <hr>
+
+    <p style="text-align:center; color:#a1a1aa; font-size:0.8rem; margin-top:24px;">
+      Demand A Band · Architecture Document · Generated Feb 2026
+    </p>
+  </div>
+</body>
+</html>
