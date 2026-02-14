@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -36,8 +37,10 @@ import {
   TrendingUp,
   Sparkles,
   DollarSign,
+  ArrowUpRight,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import Link from "next/link";
 
 interface DashboardProps {
   stats: {
@@ -266,6 +269,7 @@ export function AdminDashboardClient({
                     <TableHead className="text-right">Avg Price</TableHead>
                     <TableHead className="text-right">Max Price</TableHead>
                     <TableHead className="text-right">Dream Shows</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -302,11 +306,21 @@ export function AdminDashboardClient({
                             <span className="text-zinc-300">-</span>
                           )}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Link
+                            href={`/admin/events/new?bandId=${band.id}&bandName=${encodeURIComponent(band.name)}&avgPrice=${Math.round(band.avgPrice)}&demandCount=${band.demandCount}&dreamShowCount=${band.dreamShowCount}`}
+                          >
+                            <Button size="sm" variant="outline" className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700">
+                              <ArrowUpRight className="h-3 w-3" />
+                              Promote
+                            </Button>
+                          </Link>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-zinc-400">
+                      <TableCell colSpan={7} className="text-center text-zinc-400">
                         No demand data yet
                       </TableCell>
                     </TableRow>
@@ -377,6 +391,16 @@ export function AdminDashboardClient({
                           </p>
                           <p className="text-xs text-zinc-500">min price</p>
                         </div>
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <Link
+                          href={`/admin/events/new?bandId=${show.id}&bandName=${encodeURIComponent(show.name)}&avgPrice=${Math.round(show.avgPrice)}&demandCount=${show.fanCount}&dreamShowCount=1`}
+                        >
+                          <Button size="sm" className="gap-1 bg-amber-600 hover:bg-amber-700">
+                            <ArrowUpRight className="h-3 w-3" />
+                            Promote to Proposed Show
+                          </Button>
+                        </Link>
                       </div>
                     </Card>
                   ))}

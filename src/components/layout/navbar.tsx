@@ -51,12 +51,12 @@ export function Navbar() {
               My Shows
             </Link>
           )}
-          {session?.user?.role === "ADMIN" && (
+          {(session?.user?.role === "ADMIN" || session?.user?.role === "OPERATOR") && (
             <Link
               href="/admin"
               className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
             >
-              Admin
+              {session?.user?.role === "ADMIN" ? "Admin" : "Operator"}
             </Link>
           )}
         </nav>

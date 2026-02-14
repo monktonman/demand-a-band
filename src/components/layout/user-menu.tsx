@@ -81,13 +81,13 @@ export function UserMenu({ user }: UserMenuProps) {
             </span>
           </Link>
         </DropdownMenuItem>
-        {user.role === "ADMIN" && (
+        {(user.role === "ADMIN" || user.role === "OPERATOR") && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/admin" className="cursor-pointer">
                 <LayoutDashboard className="mr-2 h-4 w-4" />
-                Admin Dashboard
+                {user.role === "ADMIN" ? "Admin Dashboard" : "Operator Dashboard"}
               </Link>
             </DropdownMenuItem>
           </>

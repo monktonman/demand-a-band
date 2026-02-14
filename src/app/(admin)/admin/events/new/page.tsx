@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2, CalendarRange, Info } from "lucide-react";
+import { ArrowLeft, Loader2, CalendarRange, Info, TrendingUp, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, calculateServiceFee } from "@/lib/utils";
 
@@ -30,15 +30,24 @@ interface Venue {
   capacity: number;
 }
 
-export default function CreateEventPage() {
+function CreateEventForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [bands, setBands] = useState<Band[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Demand context from query params (set by "Promote" button)
+  const prefillBandId = searchParams.get("bandId");
+  const prefillBandName = searchParams.get("bandName");
+  const prefillAvgPrice = searchParams.get("avgPrice");
+  const prefillDemandCount = searchParams.get("demandCount");
+  const prefillDreamShowCount = searchParams.get("dreamShowCount");
+  const isFromDemand = !!prefillBandId;
+
   const [formData, setFormData] = useState({
-    bandId: "",
+    bandId: prefillBandId || "",
     venueId: "",
     title: "",
     description: "",
@@ -47,7 +56,7 @@ export default function CreateEventPage() {
     eventDate: "",
     doorsTime: "",
     showTime: "",
-    ticketPrice: 40,
+    ticketPrice: prefillAvgPrice ? Number(prefillAvgPrice) : 40,
     minPledges: 100,
     maxCapacity: 400,
     pledgeDeadline: "",
@@ -147,6 +156,41 @@ export default function CreateEventPage() {
         </div>
       </div>
 
+      {/* Demand Context Banner */}
+      {isFromDemand && (
+        <Card className="border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-orange-100 p-2">
+                {Number(prefillDreamShowCount) > 0 ? (
+                  <Sparkles className="h-5 w-5 text-amber-600" />
+                ) : (
+                  <TrendingUp className="h-5 w-5 text-orange-600" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-semibold text-orange-900">
+                  Creating from demand: {prefillBandName}
+                </h3>
+                <div className="mt-1 flex gap-4 text-sm text-orange-700">
+                  <span>
+                    <strong>{prefillDemandCount}</strong> fans interested
+                  </span>
+                  <span>
+                    Avg price: <strong>{formatCurrency(Number(prefillAvgPrice))}</strong>
+                  </span>
+                  {Number(prefillDreamShowCount) > 0 && (
+                    <span>
+                      <strong>{prefillDreamShowCount}</strong> dream show{Number(prefillDreamShowCount) !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {error && (
         <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
           {error}
@@ -175,6 +219,11 @@ export default function CreateEventPage() {
                   </option>
                 ))}
               </select>
+              {isFromDemand && formData.bandId && (
+                <p className="text-xs text-orange-600">
+                  Pre-selected from demand data
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -262,6 +311,11 @@ export default function CreateEventPage() {
         <Card>
           <CardHeader>
             <CardTitle>Schedule & Pricing</CardTitle>
+            {isFromDemand && (
+              <CardDescription className="text-orange-600">
+                Suggested ticket price based on demand: {formatCurrency(Number(prefillAvgPrice))}
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -357,5 +411,19 @@ export default function CreateEventPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function CreateEventPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+        </div>
+      }
+    >
+      <CreateEventForm />
+    </Suspense>
   );
 }

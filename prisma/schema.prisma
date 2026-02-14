@@ -36,6 +36,7 @@ model User {
 
 enum UserRole {
   FAN
+  OPERATOR
   ADMIN
 }
 

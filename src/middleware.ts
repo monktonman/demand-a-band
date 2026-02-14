@@ -33,10 +33,21 @@ const authMiddleware = withAuth(
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
 
-    // Admin routes require ADMIN role
+    // Admin routes require ADMIN or OPERATOR role
     if (pathname.startsWith("/admin")) {
-      if (token?.role !== "ADMIN") {
+      const role = token?.role as string;
+      const isStaff = role === "ADMIN" || role === "OPERATOR";
+      if (!isStaff) {
         return NextResponse.redirect(new URL("/", req.url));
+      }
+      // OPERATOR can only access dashboard, demand, and events
+      if (role === "OPERATOR") {
+        const allowed = pathname === "/admin" ||
+          pathname.startsWith("/admin/demand") ||
+          pathname.startsWith("/admin/events");
+        if (!allowed) {
+          return NextResponse.redirect(new URL("/admin", req.url));
+        }
       }
     }
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -14,27 +15,36 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/demand", label: "Demand Analytics", icon: TrendingUp },
-  { href: "/admin/events", label: "Events", icon: Calendar },
-  { href: "/admin/venues", label: "Venues", icon: MapPin },
-  { href: "/admin/bands", label: "Bands", icon: Music2 },
-  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
+  { href: "/admin/demand", label: "Demand Analytics", icon: TrendingUp, adminOnly: false },
+  { href: "/admin/events", label: "Events", icon: Calendar, adminOnly: false },
+  { href: "/admin/venues", label: "Venues", icon: MapPin, adminOnly: true },
+  { href: "/admin/bands", label: "Bands", icon: Music2, adminOnly: true },
+  { href: "/admin/users", label: "Users", icon: Users, adminOnly: true },
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role;
+  const isAdmin = role === "ADMIN";
+
+  const filteredItems = navItems.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
 
   return (
     <aside className="flex h-full w-64 flex-col border-r bg-zinc-50">
-      {/* Admin header */}
+      {/* Header */}
       <div className="flex h-16 items-center border-b px-6">
-        <h2 className="text-lg font-semibold">Admin Panel</h2>
+        <h2 className="text-lg font-semibold">
+          {isAdmin ? "Admin Panel" : "Operator Panel"}
+        </h2>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-4">
-        {navItems.map((item) => {
+        {filteredItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             pathname === item.href ||

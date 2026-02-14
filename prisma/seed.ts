@@ -49,6 +49,24 @@ async function main() {
   console.log(`✅ Admin user created: ${admin.email}`);
 
   // ============================================
+  // OPERATOR USER (WTMD Radio)
+  // ============================================
+  const operatorPassword = await bcrypt.hash("wtmd123!", 12);
+  const operator = await prisma.user.upsert({
+    where: { email: "operator@wtmd.org" },
+    update: {},
+    create: {
+      email: "operator@wtmd.org",
+      name: "WTMD Operator",
+      hashedPassword: operatorPassword,
+      role: "OPERATOR",
+      onboarded: true,
+      emailVerified: new Date(),
+    },
+  });
+  console.log(`✅ Operator user created: ${operator.email}`);
+
+  // ============================================
   // BALTIMORE DMA VENUES
   // ============================================
   const venues = [
@@ -665,6 +683,7 @@ async function main() {
 
   console.log("\n🎶 Seeding complete! Database is ready.\n");
   console.log("Admin login: admin@demandaband.com / admin123!");
+  console.log("Operator login: operator@wtmd.org / wtmd123!");
   console.log("Demo user login: sarah@example.com / demo123!");
 }
 
