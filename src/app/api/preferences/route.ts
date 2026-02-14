@@ -1,0 +1,100 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+// GET: Fetch user's preferences
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const [bandPreferences, cityPreferences] = await Promise.all([
+    prisma.userBandPreference.findMany({
+      where: { userId: session.user.id },
+      include: { band: true },
+      orderBy: { priority: "asc" },
+    }),
+    prisma.userCityPreference.findMany({
+      where: { userId: session.user.id },
+    }),
+  ]);
+
+  return NextResponse.json({ bandPreferences, cityPreferences });
+}
+
+// POST: Save all preferences at once (during onboarding)
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { bandPreferences, cityPreferences } = body;
+
+    // Use a transaction to save everything atomically
+    await prisma.$transaction(async (tx) => {
+      // Clear existing preferences
+      await tx.userBandPreference.deleteMany({
+        where: { userId: session.user.id },
+      });
+      await tx.userCityPreference.deleteMany({
+        where: { userId: session.user.id },
+      });
+
+      // Save band preferences
+      if (bandPreferences && bandPreferences.length > 0) {
+        await tx.userBandPreference.createMany({
+          data: bandPreferences.map(
+            (
+              pref: {
+                bandId: string;
+                maxTicketPrice: number;
+                priority: number;
+                isDreamShow: boolean;
+              },
+              index: number
+            ) => ({
+              userId: session.user.id,
+              bandId: pref.bandId,
+              maxTicketPrice: pref.maxTicketPrice || 50,
+              priority: pref.priority || index + 1,
+              isDreamShow: pref.isDreamShow || false,
+            })
+          ),
+        });
+      }
+
+      // Save city preferences
+      if (cityPreferences && cityPreferences.length > 0) {
+        await tx.userCityPreference.createMany({
+          data: cityPreferences.map(
+            (pref: { city: string; state: string; maxRadius?: number }) => ({
+              userId: session.user.id,
+              city: pref.city,
+              state: pref.state,
+              maxRadius: pref.maxRadius || 50,
+            })
+          ),
+        });
+      }
+
+      // Mark user as onboarded
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: { onboarded: true },
+      });
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error saving preferences:", error);
+    return NextResponse.json(
+      { error: "Failed to save preferences" },
+      { status: 500 }
+    );
+  }
+}
