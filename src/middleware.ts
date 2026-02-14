@@ -21,6 +21,7 @@ export default withAuth(
       !pathname.startsWith("/onboarding") &&
       !pathname.startsWith("/api") &&
       !pathname.startsWith("/admin") &&
+      !pathname.startsWith("/events") &&
       pathname !== "/"
     ) {
       return NextResponse.redirect(new URL("/onboarding", req.url));
@@ -34,7 +35,7 @@ export default withAuth(
         const { pathname } = req.nextUrl;
 
         // Public routes that don't require auth
-        const publicPaths = ["/", "/login", "/register", "/api/auth"];
+        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands"];
         if (publicPaths.some((p) => pathname.startsWith(p))) {
           return true;
         }
