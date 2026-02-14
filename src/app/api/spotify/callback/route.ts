@@ -23,10 +23,13 @@ export async function GET(req: NextRequest) {
     const state = searchParams.get("state");
     const error = searchParams.get("error");
 
+    // Determine return path from cookie (default /onboarding)
+    const returnTo = req.cookies.get("spotify_return_to")?.value || "/onboarding";
+
     // User denied access
     if (error) {
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?spotify=denied`
+        `${baseUrl}${returnTo}?spotify=denied`
       );
     }
 
@@ -36,13 +39,13 @@ export async function GET(req: NextRequest) {
 
     if (!state || !storedState || state !== storedState) {
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?spotify=error&reason=invalid_state`
+        `${baseUrl}${returnTo}?spotify=error&reason=invalid_state`
       );
     }
 
     if (!code || !userId) {
       return NextResponse.redirect(
-        `${baseUrl}/onboarding?spotify=error&reason=missing_params`
+        `${baseUrl}${returnTo}?spotify=error&reason=missing_params`
       );
     }
 
@@ -87,10 +90,10 @@ export async function GET(req: NextRequest) {
     const { matched, unmatchedCount } =
       await matchArtistsToCatalog(topArtists);
 
-    // Store matched band IDs in a cookie for the onboarding page
+    // Store matched band IDs in a cookie for the return page
     const matchedIds = matched.map((b) => b.id);
     const response = NextResponse.redirect(
-      `${baseUrl}/onboarding?spotify=success&matched=${matched.length}&unmatched=${unmatchedCount}`
+      `${baseUrl}${returnTo}?spotify=success&matched=${matched.length}&unmatched=${unmatchedCount}`
     );
 
     // Store matched IDs (cookie has a 4KB limit, so we use JSON)
@@ -105,12 +108,15 @@ export async function GET(req: NextRequest) {
     // Clear state cookies
     response.cookies.delete("spotify_oauth_state");
     response.cookies.delete("spotify_oauth_user");
+    response.cookies.delete("spotify_return_to");
 
     return response;
   } catch (err) {
     console.error("Spotify callback error:", err);
+    // Best-effort returnTo from cookie, fallback to /onboarding
+    const fallbackReturn = req.cookies.get("spotify_return_to")?.value || "/onboarding";
     return NextResponse.redirect(
-      `${baseUrl}/onboarding?spotify=error&reason=server_error`
+      `${baseUrl}${fallbackReturn}?spotify=error&reason=server_error`
     );
   }
 }
