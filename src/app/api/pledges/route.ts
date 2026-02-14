@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyPledgeConfirmed, notifyThresholdMet } from "@/lib/notifications";
 
 // GET: Get user's pledges
 export async function GET() {
@@ -118,6 +119,17 @@ export async function POST(req: Request) {
       },
     });
 
+    // Send pledge confirmation notification (async, don't block response)
+    notifyPledgeConfirmed({
+      userId: session.user.id,
+      eventId,
+      bandName: pledge.event.band.name,
+      venueName: pledge.event.venue.name,
+      eventDate: pledge.event.eventDate,
+      totalAmount,
+      quantity,
+    }).catch(console.error);
+
     // Check if threshold is now met
     const totalPledges = event._count.pledges + quantity;
     if (totalPledges >= event.minPledges && event.status === "PROPOSED") {
@@ -125,6 +137,9 @@ export async function POST(req: Request) {
         where: { id: eventId },
         data: { status: "THRESHOLD_MET" },
       });
+
+      // Notify all pledgers that threshold was met
+      notifyThresholdMet(eventId).catch(console.error);
     }
 
     return NextResponse.json({ pledge }, { status: 201 });

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 export function Navbar() {
   const { data: session, status } = useSession();
@@ -45,7 +46,10 @@ export function Navbar() {
           {status === "loading" ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-zinc-200" />
           ) : session ? (
-            <UserMenu user={session.user} />
+            <>
+              <NotificationBell />
+              <UserMenu user={session.user} />
+            </>
           ) : (
             <>
               <Link href="/login">

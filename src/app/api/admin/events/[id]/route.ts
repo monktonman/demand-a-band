@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createPaymentIntent } from "@/lib/stripe-helpers";
+import {
+  notifyEventConfirmed,
+  notifyEventCancelled,
+  notifyPaymentFailed,
+} from "@/lib/notifications";
 
 // PATCH: Update event status (admin only)
 export async function PATCH(
@@ -102,6 +107,22 @@ export async function PATCH(
       const succeeded = results.filter((r) => r.success).length;
       const failed = results.filter((r) => !r.success).length;
 
+      // Send notifications to all pledgers
+      notifyEventConfirmed(id).catch(console.error);
+
+      // Notify users with failed payments
+      for (const result of results.filter((r) => !r.success)) {
+        const pledge = event.pledges.find((p) => p.id === result.pledgeId);
+        if (pledge) {
+          notifyPaymentFailed({
+            userId: pledge.userId,
+            eventId: id,
+            bandName: "the artist",
+            venueName: "the venue",
+          }).catch(console.error);
+        }
+      }
+
       return NextResponse.json({
         event: { id, status: "CONFIRMED" },
         payments: {
@@ -139,6 +160,9 @@ export async function PATCH(
           cancelledAt: new Date(),
         },
       });
+
+      // Send cancellation notifications
+      notifyEventCancelled(id).catch(console.error);
 
       return NextResponse.json({
         event: { id, status: "CANCELLED" },
