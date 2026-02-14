@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
 import { Music } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { StepBands } from "@/components/onboarding/step-bands";
 import { StepLocation } from "@/components/onboarding/step-location";
 import { StepPricing } from "@/components/onboarding/step-pricing";
@@ -17,6 +18,7 @@ export interface SelectedBand {
   imageUrl?: string | null;
   maxTicketPrice: number;
   isDreamShow: boolean;
+  source?: "manual" | "spotify";
 }
 
 export interface CityPreference {
@@ -103,7 +105,10 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
+    <div className={cn(
+      "mx-auto px-4 py-8 sm:py-12",
+      currentStep === 0 ? "max-w-4xl" : "max-w-2xl"
+    )}>
       {/* Header */}
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
