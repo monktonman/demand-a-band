@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Ticket, Heart, Music2, MapPin, Calendar } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Ticket, Heart, Music2, MapPin, Calendar, Users, ExternalLink } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 
@@ -19,6 +20,14 @@ const PLEDGE_STATUS_COLORS: Record<string, string> = {
   REFUNDED: "bg-zinc-100 text-zinc-800",
 };
 
+const PLEDGE_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Pledged",
+  CHARGED: "Charged",
+  PAYMENT_FAILED: "Payment Failed",
+  CANCELLED: "Cancelled",
+  REFUNDED: "Refunded",
+};
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
@@ -28,7 +37,11 @@ export default async function DashboardPage() {
       where: { userId: session.user.id },
       include: {
         event: {
-          include: { band: true, venue: true },
+          include: {
+            band: true,
+            venue: true,
+            _count: { select: { pledges: true } },
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -43,8 +56,10 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const activePledges = pledges.filter(
-    (p) => p.status === "ACTIVE"
+  const activePledges = pledges.filter((p) => p.status === "ACTIVE");
+  const totalPledged = pledges.reduce(
+    (sum, p) => sum + Number(p.totalAmount),
+    0
   );
   const dreamShows = bandPrefs.filter((p) => p.isDreamShow);
 
@@ -75,7 +90,7 @@ export default async function DashboardPage() {
             <Heart className="h-8 w-8 text-pink-600" />
             <div>
               <p className="text-2xl font-bold">{bandPrefs.length}</p>
-              <p className="text-xs text-zinc-500">Band Preferences</p>
+              <p className="text-xs text-zinc-500">Bands Followed</p>
             </div>
           </CardContent>
         </Card>
@@ -92,64 +107,122 @@ export default async function DashboardPage() {
           <CardContent className="flex items-center gap-3 p-4">
             <MapPin className="h-8 w-8 text-blue-600" />
             <div>
-              <p className="text-2xl font-bold">{cityPrefs.length}</p>
-              <p className="text-xs text-zinc-500">Cities</p>
+              <p className="text-2xl font-bold">
+                {totalPledged > 0 ? formatCurrency(totalPledged) : "$0"}
+              </p>
+              <p className="text-xs text-zinc-500">Total Pledged</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        {/* My Pledges */}
-        <Card>
-          <CardHeader>
+      {/* My Pledges — Full Width */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Ticket className="h-5 w-5 text-orange-600" />
               My Pledges
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pledges.length > 0 ? (
-              <div className="space-y-3">
-                {pledges.slice(0, 5).map((pledge) => (
-                  <div
+            <Link href="/my-events">
+              <Button variant="outline" size="sm" className="gap-1">
+                View All
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {pledges.length > 0 ? (
+            <div className="space-y-3">
+              {pledges.map((pledge) => {
+                const pledgeCount = pledge.event._count.pledges;
+                const progress = Math.min(
+                  (pledgeCount / pledge.event.minPledges) * 100,
+                  100
+                );
+                return (
+                  <Link
                     key={pledge.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    href={`/events/${pledge.event.slug}`}
+                    className="block"
                   >
-                    <div>
-                      <p className="font-medium">{pledge.event.band.name}</p>
-                      <div className="flex items-center gap-2 text-xs text-zinc-500">
-                        <MapPin className="h-3 w-3" />
-                        {pledge.event.venue.name}
-                        <Calendar className="h-3 w-3 ml-1" />
-                        {formatDate(pledge.event.eventDate)}
+                    <div className="flex items-center gap-4 rounded-lg border p-4 transition-all hover:shadow-md hover:border-orange-200">
+                      {/* Band icon */}
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+                        <Music2 className="h-6 w-6 text-orange-600" />
+                      </div>
+
+                      {/* Event details */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold truncate">
+                            {pledge.event.band.name}
+                          </h3>
+                          <Badge className={PLEDGE_STATUS_COLORS[pledge.status]}>
+                            {PLEDGE_STATUS_LABELS[pledge.status] || pledge.status}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {pledge.event.venue.name}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDate(pledge.event.eventDate)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Ticket className="h-3 w-3" />
+                            {pledge.quantity} {pledge.quantity === 1 ? "ticket" : "tickets"}
+                          </span>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="flex items-center gap-1 text-zinc-400">
+                              <Users className="h-3 w-3" />
+                              {pledgeCount} / {pledge.event.minPledges} pledges
+                            </span>
+                            <span className="font-medium text-orange-600">
+                              {Math.round(progress)}%
+                            </span>
+                          </div>
+                          <Progress value={progress} className="h-1.5" />
+                        </div>
+                      </div>
+
+                      {/* Amount */}
+                      <div className="shrink-0 text-right">
+                        <p className="text-lg font-bold text-zinc-900">
+                          {formatCurrency(Number(pledge.totalAmount))}
+                        </p>
+                        <p className="text-xs text-zinc-400">pledged</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <Badge className={PLEDGE_STATUS_COLORS[pledge.status]}>
-                        {pledge.status.toLowerCase()}
-                      </Badge>
-                      <p className="mt-1 text-sm font-medium">
-                        {formatCurrency(Number(pledge.totalAmount))}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-6 text-center text-zinc-400">
-                <Ticket className="mx-auto mb-2 h-8 w-8" />
-                <p>No pledges yet</p>
-                <Link href="/events">
-                  <Button variant="link" className="mt-1 text-orange-600">
-                    Browse events
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-zinc-400">
+              <Ticket className="mx-auto mb-3 h-10 w-10" />
+              <p className="text-lg font-medium text-zinc-600">No pledges yet</p>
+              <p className="mt-1 text-sm">
+                Browse events and pledge your support to make shows happen!
+              </p>
+              <Link href="/events">
+                <Button className="mt-4 bg-orange-600 hover:bg-orange-700">
+                  Browse Events
+                </Button>
+              </Link>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
+      {/* Bottom row — Preferences */}
+      <div className="grid gap-8 lg:grid-cols-2">
         {/* My Band Preferences */}
         <Card>
           <CardHeader>
@@ -171,10 +244,13 @@ export default async function DashboardPage() {
                 {bandPrefs.slice(0, 8).map((pref) => (
                   <div
                     key={pref.id}
-                    className="flex items-center justify-between rounded-lg border p-2"
+                    className="flex items-center justify-between rounded-lg border p-2.5"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{pref.band.name}</span>
+                      <div className="flex h-8 w-8 items-center justify-center rounded bg-orange-50">
+                        <Music2 className="h-4 w-4 text-orange-500" />
+                      </div>
+                      <span className="font-medium text-sm">{pref.band.name}</span>
                       {pref.isDreamShow && (
                         <Badge className="bg-amber-500 text-xs">Dream</Badge>
                       )}
@@ -197,6 +273,52 @@ export default async function DashboardPage() {
                 <Link href="/onboarding">
                   <Button variant="link" className="mt-1 text-orange-600">
                     Set up preferences
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* City Preferences */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                My City Preferences
+              </CardTitle>
+              <Link href="/onboarding">
+                <Button variant="outline" size="sm">
+                  Edit
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {cityPrefs.length > 0 ? (
+              <div className="space-y-2">
+                {cityPrefs.map((pref) => (
+                  <div
+                    key={pref.id}
+                    className="flex items-center justify-between rounded-lg border p-2.5"
+                  >
+                    <span className="font-medium text-sm">
+                      {pref.city}, {pref.state}
+                    </span>
+                    <span className="text-sm text-zinc-500">
+                      {pref.maxRadius} mi radius
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-6 text-center text-zinc-400">
+                <MapPin className="mx-auto mb-2 h-8 w-8" />
+                <p>No cities set</p>
+                <Link href="/onboarding">
+                  <Button variant="link" className="mt-1 text-orange-600">
+                    Add cities
                   </Button>
                 </Link>
               </div>

@@ -329,70 +329,41 @@ async function main() {
   console.log(`✅ ${venues.length} Baltimore DMA venues seeded`);
 
   // ============================================
-  // SAMPLE BANDS (popular in Baltimore/AAA radio market)
+  // 1,000 BANDS (real artists + generated names)
   // ============================================
-  const bands = [
-    { name: "Pinegrove", slug: "pinegrove", genres: ["Indie Rock", "Folk", "Alternative"], popularity: 62 },
-    { name: "Big Thief", slug: "big-thief", genres: ["Indie Rock", "Folk", "Alternative"], popularity: 68 },
-    { name: "Waxahatchee", slug: "waxahatchee", genres: ["Indie Rock", "Singer-Songwriter", "Alternative"], popularity: 60 },
-    { name: "Turnstile", slug: "turnstile", genres: ["Punk", "Hardcore", "Rock"], popularity: 65 },
-    { name: "Japanese Breakfast", slug: "japanese-breakfast", genres: ["Indie Rock", "Pop", "Alternative"], popularity: 67 },
-    { name: "Lucy Dacus", slug: "lucy-dacus", genres: ["Indie Rock", "Singer-Songwriter"], popularity: 63 },
-    { name: "Julien Baker", slug: "julien-baker", genres: ["Indie Rock", "Singer-Songwriter", "Alternative"], popularity: 58 },
-    { name: "Phoebe Bridgers", slug: "phoebe-bridgers", genres: ["Indie Rock", "Singer-Songwriter", "Folk"], popularity: 75 },
-    { name: "Bon Iver", slug: "bon-iver", genres: ["Indie Rock", "Folk", "Electronic"], popularity: 78 },
-    { name: "The War on Drugs", slug: "the-war-on-drugs", genres: ["Indie Rock", "Rock", "Alternative"], popularity: 72 },
-    { name: "Tyler Childers", slug: "tyler-childers", genres: ["Country", "Folk", "Americana"], popularity: 76 },
-    { name: "Hozier", slug: "hozier", genres: ["Folk", "Rock", "Singer-Songwriter"], popularity: 82 },
-    { name: "Maggie Rogers", slug: "maggie-rogers", genres: ["Indie Rock", "Pop", "Folk"], popularity: 74 },
-    { name: "Mt. Joy", slug: "mt-joy", genres: ["Indie Rock", "Folk", "Rock"], popularity: 66 },
-    { name: "Caamp", slug: "caamp", genres: ["Indie Rock", "Folk", "Americana"], popularity: 68 },
-    { name: "Khruangbin", slug: "khruangbin", genres: ["Funk", "Rock", "World Music"], popularity: 72 },
-    { name: "Kamasi Washington", slug: "kamasi-washington", genres: ["Jazz", "Experimental"], popularity: 55 },
-    { name: "Snarky Puppy", slug: "snarky-puppy", genres: ["Jazz", "Funk", "World Music"], popularity: 58 },
-    { name: "Tedeschi Trucks Band", slug: "tedeschi-trucks-band", genres: ["Blues", "Rock", "Americana"], popularity: 60 },
-    { name: "Jason Isbell", slug: "jason-isbell", genres: ["Americana", "Rock", "Singer-Songwriter"], popularity: 64 },
-    { name: "Sturgill Simpson", slug: "sturgill-simpson", genres: ["Country", "Rock", "Americana"], popularity: 65 },
-    { name: "Billy Strings", slug: "billy-strings", genres: ["Folk", "Americana", "Rock"], popularity: 70 },
-    { name: "Goose", slug: "goose", genres: ["Rock", "Indie Rock", "Experimental"], popularity: 62 },
-    { name: "Mdou Moctar", slug: "mdou-moctar", genres: ["Rock", "World Music", "Experimental"], popularity: 52 },
-    { name: "Black Midi", slug: "black-midi", genres: ["Experimental", "Rock", "Punk"], popularity: 50 },
-    { name: "Fontaines D.C.", slug: "fontaines-dc", genres: ["Punk", "Rock", "Alternative"], popularity: 64 },
-    { name: "Boygenius", slug: "boygenius", genres: ["Indie Rock", "Singer-Songwriter", "Alternative"], popularity: 72 },
-    { name: "Alvvays", slug: "alvvays", genres: ["Indie Rock", "Pop", "Alternative"], popularity: 63 },
-    { name: "Beach House", slug: "beach-house", genres: ["Indie Rock", "Electronic", "Alternative"], popularity: 70 },
-    { name: "Animal Collective", slug: "animal-collective", genres: ["Experimental", "Electronic", "Indie Rock"], popularity: 58 },
-    { name: "Future Islands", slug: "future-islands", genres: ["Indie Rock", "Electronic", "Pop"], popularity: 60 },
-    { name: "Dan Deacon", slug: "dan-deacon", genres: ["Electronic", "Experimental"], popularity: 45 },
-    { name: "Lower Dens", slug: "lower-dens", genres: ["Indie Rock", "Electronic", "Alternative"], popularity: 40 },
-    { name: "Snail Mail", slug: "snail-mail", genres: ["Indie Rock", "Singer-Songwriter", "Alternative"], popularity: 55 },
-    { name: "JPEGMAFIA", slug: "jpegmafia", genres: ["Hip-Hop", "Experimental", "Electronic"], popularity: 62 },
-    { name: "The National", slug: "the-national", genres: ["Indie Rock", "Rock", "Alternative"], popularity: 73 },
-    { name: "Fleet Foxes", slug: "fleet-foxes", genres: ["Folk", "Indie Rock", "Singer-Songwriter"], popularity: 71 },
-    { name: "Iron & Wine", slug: "iron-and-wine", genres: ["Folk", "Singer-Songwriter", "Indie Rock"], popularity: 62 },
-    { name: "Wilco", slug: "wilco", genres: ["Rock", "Alternative", "Americana"], popularity: 63 },
-    { name: "My Morning Jacket", slug: "my-morning-jacket", genres: ["Rock", "Alternative", "Americana"], popularity: 58 },
-    // Dream Show / Premium tier bands
-    { name: "Radiohead", slug: "radiohead", genres: ["Rock", "Alternative", "Electronic"], popularity: 85 },
-    { name: "Bruce Springsteen", slug: "bruce-springsteen", genres: ["Rock", "Singer-Songwriter"], popularity: 82 },
-    { name: "Taylor Swift", slug: "taylor-swift", genres: ["Pop", "Country", "Singer-Songwriter"], popularity: 99 },
-    { name: "Kendrick Lamar", slug: "kendrick-lamar", genres: ["Hip-Hop", "R&B/Soul"], popularity: 92 },
-    { name: "Billie Eilish", slug: "billie-eilish", genres: ["Pop", "Alternative", "Electronic"], popularity: 93 },
-    { name: "Dave Matthews Band", slug: "dave-matthews-band", genres: ["Rock", "Folk", "Jazz"], popularity: 72 },
-    { name: "Pearl Jam", slug: "pearl-jam", genres: ["Rock", "Alternative"], popularity: 78 },
-    { name: "Foo Fighters", slug: "foo-fighters", genres: ["Rock", "Alternative"], popularity: 82 },
-    { name: "Jack White", slug: "jack-white", genres: ["Rock", "Blues", "Alternative"], popularity: 70 },
-    { name: "Arcade Fire", slug: "arcade-fire", genres: ["Indie Rock", "Rock", "Alternative"], popularity: 72 },
-  ];
+  const { allBands: seedBands } = await import("./band-data");
 
-  for (const band of bands) {
-    await prisma.band.upsert({
-      where: { slug: band.slug },
-      update: band,
-      create: band,
-    });
+  // Batch upsert for performance — process in chunks of 50
+  const BAND_CHUNK_SIZE = 50;
+  let bandCount = 0;
+  for (let i = 0; i < seedBands.length; i += BAND_CHUNK_SIZE) {
+    const chunk = seedBands.slice(i, i + BAND_CHUNK_SIZE);
+    await Promise.all(
+      chunk.map((band) =>
+        prisma.band.upsert({
+          where: { slug: band.slug },
+          update: {
+            name: band.name,
+            genres: band.genres,
+            popularity: band.popularity,
+            monthlyListeners: band.monthlyListeners ?? null,
+          },
+          create: {
+            name: band.name,
+            slug: band.slug,
+            genres: band.genres,
+            popularity: band.popularity,
+            monthlyListeners: band.monthlyListeners ?? null,
+          },
+        })
+      )
+    );
+    bandCount += chunk.length;
+    if (bandCount % 200 === 0) {
+      console.log(`   ... ${bandCount} / ${seedBands.length} bands processed`);
+    }
   }
-  console.log(`✅ ${bands.length} bands seeded`);
+  console.log(`✅ ${bandCount} bands seeded`);
 
   // ============================================
   // SAMPLE USERS (for realistic demo)

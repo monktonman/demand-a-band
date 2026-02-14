@@ -26,11 +26,25 @@ export function Navbar() {
         {/* Navigation */}
         <nav className="hidden items-center gap-6 md:flex">
           <Link
+            href="/bands"
+            className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+          >
+            Artists
+          </Link>
+          <Link
             href="/events"
             className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
           >
             Events
           </Link>
+          {session && (
+            <Link
+              href="/my-events"
+              className="text-sm font-medium text-zinc-600 transition-colors hover:text-zinc-900"
+            >
+              My Events
+            </Link>
+          )}
           {session?.user?.role === "ADMIN" && (
             <Link
               href="/admin"
