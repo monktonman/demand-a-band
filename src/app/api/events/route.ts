@@ -1,0 +1,76 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { createEventSchema } from "@/lib/validations";
+import { slugify } from "@/lib/utils";
+
+// GET: List events (public)
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const status = searchParams.get("status");
+
+  const events = await prisma.event.findMany({
+    where: status ? { status: status as "PROPOSED" | "THRESHOLD_MET" | "CONFIRMED" | "CANCELLED" | "COMPLETED" } : undefined,
+    include: {
+      band: true,
+      venue: true,
+      _count: { select: { pledges: true } },
+    },
+    orderBy: { eventDate: "asc" },
+  });
+
+  return NextResponse.json({ events });
+}
+
+// POST: Create event (admin only)
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const validatedData = createEventSchema.parse(body);
+
+    // Generate slug from title
+    const slug = slugify(validatedData.title);
+
+    // Calculate service fee
+    const ticketPrice = validatedData.ticketPrice;
+    const serviceFee = ticketPrice < 15 ? 3.5 : Math.round(ticketPrice * 0.12 * 100) / 100;
+
+    const event = await prisma.event.create({
+      data: {
+        bandId: validatedData.bandId,
+        venueId: validatedData.venueId,
+        title: validatedData.title,
+        slug,
+        description: validatedData.description || "",
+        eventDate: new Date(validatedData.eventDate),
+        doorsTime: validatedData.doorsTime ? new Date(validatedData.doorsTime) : null,
+        showTime: validatedData.showTime ? new Date(validatedData.showTime) : null,
+        ticketPrice,
+        serviceFee,
+        minPledges: validatedData.minPledges,
+        maxCapacity: validatedData.maxCapacity,
+        pledgeDeadline: new Date(validatedData.pledgeDeadline),
+        imageUrl: validatedData.imageUrl || null,
+        status: "PROPOSED",
+      },
+      include: {
+        band: true,
+        venue: true,
+      },
+    });
+
+    return NextResponse.json({ event }, { status: 201 });
+  } catch (error) {
+    console.error("Create event error:", error);
+    return NextResponse.json(
+      { error: "Failed to create event" },
+      { status: 500 }
+    );
+  }
+}
