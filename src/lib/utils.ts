@@ -1,4 +1,4 @@
-import { type ClassValue, clsx } from "clsx";
+import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -23,33 +23,39 @@ export function formatCurrencyDecimal(amount: number): string {
   }).format(amount);
 }
 
+/**
+ * Calculate service fee based on DAB pricing model:
+ * - Under $15 ticket: $3.50 flat fee
+ * - $15+ ticket: 12% of face value
+ */
 export function calculateServiceFee(ticketPrice: number): number {
   if (ticketPrice < 15) return 3.5;
   return Math.round(ticketPrice * 0.12 * 100) / 100;
 }
 
 export function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     weekday: "short",
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
+  }).format(new Date(date));
 }
 
 export function formatTime(date: Date | string): string {
-  return new Date(date).toLocaleTimeString("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  });
+  }).format(new Date(date));
 }
 
 export function slugify(text: string): string {
   return text
     .toLowerCase()
+    .trim()
     .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_]+/g, "-")
+    .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
 
