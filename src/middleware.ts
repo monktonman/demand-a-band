@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 
 // Beta gate paths that should bypass the gate
-const betaBypassPaths = ["/beta", "/api/beta", "/_next", "/favicon.ico"];
+const betaBypassPaths = ["/beta", "/api/beta", "/_next", "/favicon.ico", "/api/spotify/callback"];
 
 function isBetaBypass(pathname: string): boolean {
   return betaBypassPaths.some((p) => pathname.startsWith(p));
@@ -75,7 +75,7 @@ const authMiddleware = withAuth(
         const { pathname } = req.nextUrl;
 
         // Public routes that don't require auth
-        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows", "/beta", "/api/beta"];
+        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows", "/beta", "/api/beta", "/api/spotify/callback"];
         if (publicPaths.some((p) => pathname.startsWith(p))) {
           return true;
         }
