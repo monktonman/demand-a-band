@@ -1,10 +1,22 @@
-export default function AdminDashboardPage() {
+import { getPlatformStats, getMostDemandedBands, getDreamShowDemand, getDemandByCity } from "@/lib/demand-queries";
+import { AdminDashboardClient } from "@/components/admin/dashboard-client";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminDashboardPage() {
+  const [stats, topBands, dreamShows, cityDemand] = await Promise.all([
+    getPlatformStats(),
+    getMostDemandedBands(15),
+    getDreamShowDemand(),
+    getDemandByCity(),
+  ]);
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-      <p className="mt-2 text-zinc-500">
-        Overview of platform activity. Coming in Phase 3.
-      </p>
-    </div>
+    <AdminDashboardClient
+      stats={stats}
+      topBands={topBands}
+      dreamShows={dreamShows}
+      cityDemand={cityDemand}
+    />
   );
 }
