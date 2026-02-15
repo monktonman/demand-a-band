@@ -4,20 +4,53 @@ import { Music } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function EventsPage() {
-  const events = await prisma.event.findMany({
-    where: {
-      status: { in: ["PROPOSED", "THRESHOLD_MET", "CONFIRMED"] },
-    },
-    include: {
-      band: true,
-      venue: true,
-      _count: { select: { pledges: true } },
-    },
-    orderBy: { eventDate: "asc" },
-  });
+// Cache stale threshold in hours
+const CACHE_MAX_AGE_HOURS = 6;
 
-  // Serialize dates and Decimals for client component
+export default async function EventsPage() {
+  // Fetch DAB events and external events in parallel
+  const [events, externalEvents, cacheInfo] = await Promise.all([
+    prisma.event.findMany({
+      where: {
+        status: { in: ["PROPOSED", "THRESHOLD_MET", "CONFIRMED"] },
+      },
+      include: {
+        band: true,
+        venue: true,
+        _count: { select: { pledges: true } },
+      },
+      orderBy: { eventDate: "asc" },
+    }),
+    prisma.externalEvent.findMany({
+      where: {
+        eventDate: { gte: new Date() },
+      },
+      orderBy: { eventDate: "asc" },
+    }),
+    // Check if cache needs refreshing
+    prisma.externalEvent.findFirst({
+      orderBy: { fetchedAt: "desc" },
+      select: { fetchedAt: true },
+    }),
+  ]);
+
+  // Trigger background cache refresh if stale
+  const cacheAge = cacheInfo
+    ? (Date.now() - cacheInfo.fetchedAt.getTime()) / (1000 * 60 * 60)
+    : Infinity;
+
+  if (cacheAge > CACHE_MAX_AGE_HOURS) {
+    // Fire-and-forget refresh (don't block page render)
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000";
+
+    fetch(`${baseUrl}/api/external-events`, { method: "POST" }).catch(() => {
+      // Silently fail — page still renders with stale/empty cache
+    });
+  }
+
+  // Serialize DAB events
   const serializedEvents = events.map((e) => ({
     ...e,
     eventDate: e.eventDate.toISOString(),
@@ -34,17 +67,43 @@ export default async function EventsPage() {
     showTime: e.showTime?.toISOString() ?? null,
   }));
 
+  // Serialize external events
+  const serializedExternalEvents = externalEvents.map((e) => ({
+    id: e.id,
+    externalId: e.externalId,
+    name: e.name,
+    artistName: e.artistName,
+    genres: e.genres,
+    venueName: e.venueName,
+    venueCity: e.venueCity,
+    venueState: e.venueState,
+    eventDate: e.eventDate.toISOString(),
+    eventTime: e.eventTime,
+    imageUrl: e.imageUrl,
+    ticketUrl: e.ticketUrl,
+    priceMin: e.priceMin?.toString() ?? null,
+    priceMax: e.priceMax?.toString() ?? null,
+    source: e.source,
+  }));
+
+  const totalShows = events.length + externalEvents.length;
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Shows</h1>
         <p className="mt-2 text-zinc-500">
-          Browse proposed and upcoming shows. Commit your support to make them happen.
+          {externalEvents.length > 0
+            ? `${totalShows} upcoming shows in the Baltimore area. Pledge for DAB shows or grab tickets to confirmed concerts.`
+            : "Browse proposed and upcoming shows. Commit your support to make them happen."}
         </p>
       </div>
 
-      {events.length > 0 ? (
-        <EventsView events={serializedEvents} />
+      {totalShows > 0 ? (
+        <EventsView
+          events={serializedEvents}
+          externalEvents={serializedExternalEvents}
+        />
       ) : (
         <div className="py-24 text-center">
           <Music className="mx-auto mb-4 h-12 w-12 text-zinc-300" />

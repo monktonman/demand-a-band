@@ -33,6 +33,7 @@ model User {
   notifications   Notification[]
   dreamShows      DreamShow[]      @relation("dreamShowCreator")
   dreamShowVotes  DreamShowVote[]  @relation("dreamShowVoter")
+  feedback        Feedback[]
 }
 
 enum UserRole {
@@ -330,4 +331,48 @@ enum NotificationType {
   EVENT_CANCELLED
   PAYMENT_FAILED
   PLEDGE_REMINDER
+}
+
+// ============================================
+// EXTERNAL EVENTS (cached from Ticketmaster etc.)
+// ============================================
+
+model ExternalEvent {
+  id         String   @id @default(cuid())
+  externalId String   @unique // Ticketmaster event ID
+  name       String
+  artistName String
+  genres     String[] // from TM classifications
+  venueName  String
+  venueCity  String
+  venueState String
+  eventDate  DateTime
+  eventTime  String? // "7:00 PM" display string
+  imageUrl   String?
+  ticketUrl  String? // link to buy tickets
+  priceMin   Decimal? @db.Decimal(10, 2)
+  priceMax   Decimal? @db.Decimal(10, 2)
+  source     String   @default("ticketmaster")
+  fetchedAt  DateTime @default(now()) // when we cached it
+  createdAt  DateTime @default(now())
+
+  @@index([eventDate])
+  @@index([artistName])
+}
+
+// ============================================
+// FEEDBACK (beta tester submissions)
+// ============================================
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  page      String // URL path where submitted
+  category  String   @default("general") // "bug", "feature", "general"
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }
