@@ -270,7 +270,9 @@ model DreamShow {
   shareCode      String   @unique
   creatorId      String
   bandId         String
-  venueId        String
+  venueId        String?  // optional — specific venue assigned later by promoter
+  venueSize      String?  // e.g., "intimate", "club", "theater", "large"
+  venueSizeLabel String?  // e.g., "Intimate (under 200)"
   maxTicketPrice Decimal  @db.Decimal(10, 2)
   priceTierLabel String   // e.g., "$200–500"
   message        String?  @db.Text  // optional personal pitch
@@ -279,7 +281,7 @@ model DreamShow {
 
   creator User           @relation("dreamShowCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   band    Band           @relation(fields: [bandId], references: [id])
-  venue   Venue          @relation(fields: [venueId], references: [id])
+  venue   Venue?         @relation(fields: [venueId], references: [id])
   votes   DreamShowVote[]
 
   @@index([shareCode])

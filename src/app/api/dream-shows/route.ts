@@ -13,11 +13,19 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { bandId, venueId, maxTicketPrice, priceTierLabel, message } = body;
+    const { bandId, venueId, venueSize, venueSizeLabel, maxTicketPrice, priceTierLabel, message } = body;
 
-    if (!bandId || !venueId || !maxTicketPrice || !priceTierLabel) {
+    if (!bandId || !maxTicketPrice || !priceTierLabel) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Must have either a specific venue or a venue size
+    if (!venueId && !venueSize) {
+      return NextResponse.json(
+        { error: "Please select a venue or venue size" },
         { status: 400 }
       );
     }
@@ -30,7 +38,9 @@ export async function POST(req: Request) {
         shareCode,
         creatorId: session.user.id,
         bandId,
-        venueId,
+        venueId: venueId || null,
+        venueSize: venueSize || null,
+        venueSizeLabel: venueSizeLabel || null,
         maxTicketPrice,
         priceTierLabel,
         message: message || null,

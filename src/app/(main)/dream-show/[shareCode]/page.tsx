@@ -20,6 +20,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+const VENUE_SIZE_CAPACITIES: Record<string, string> = {
+  intimate: "Under 200",
+  club: "200–500",
+  theater: "500–1,500",
+  large: "1,500–5,000",
+};
+
 type DreamShowData = {
   id: string;
   shareCode: string;
@@ -33,7 +40,9 @@ type DreamShowData = {
     city: string;
     state: string;
     capacity: number;
-  };
+  } | null;
+  venueSize: string | null;
+  venueSizeLabel: string | null;
   maxTicketPrice: number;
   priceTierLabel: string;
   message: string | null;
@@ -128,7 +137,11 @@ export default function DreamShowSharePage({
   };
 
   const shareText = dreamShow
-    ? `I want to see ${dreamShow.band.name} at ${dreamShow.venue.name} (${dreamShow.venue.capacity} cap)! Opt in to help make it happen:`
+    ? dreamShow.venue
+      ? `I want to see ${dreamShow.band.name} at ${dreamShow.venue.name}! Opt in to help make it happen:`
+      : dreamShow.venueSize
+        ? `I want to see ${dreamShow.band.name} in a ${VENUE_SIZE_CAPACITIES[dreamShow.venueSize] || ""}-person venue! Opt in to help make it happen:`
+        : `I want to see ${dreamShow.band.name} live! Opt in to help make it happen:`
     : "";
 
   if (loading) {
@@ -192,17 +205,38 @@ export default function DreamShowSharePage({
           <h1 className="text-3xl font-bold sm:text-4xl">
             {dreamShow.band.name}
           </h1>
-          <div className="mt-2 flex items-center gap-2 text-zinc-300">
-            <MapPin className="h-4 w-4 text-orange-400" />
-            <span>
-              {dreamShow.venue.name} · {dreamShow.venue.city},{" "}
-              {dreamShow.venue.state}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-zinc-400">
-            {dreamShow.venue.capacity}-person venue ·{" "}
-            {dreamShow.priceTierLabel} per ticket
-          </p>
+          {dreamShow.venue ? (
+            <>
+              <div className="mt-2 flex items-center gap-2 text-zinc-300">
+                <MapPin className="h-4 w-4 text-orange-400" />
+                <span>
+                  {dreamShow.venue.name} · {dreamShow.venue.city},{" "}
+                  {dreamShow.venue.state}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-zinc-400">
+                {dreamShow.venue.capacity}-person venue ·{" "}
+                {dreamShow.priceTierLabel} per ticket
+              </p>
+            </>
+          ) : dreamShow.venueSize ? (
+            <>
+              <div className="mt-2 flex items-center gap-2 text-zinc-300">
+                <Users className="h-4 w-4 text-orange-400" />
+                <span>
+                  {dreamShow.venueSizeLabel || dreamShow.venueSize} venue ·{" "}
+                  {VENUE_SIZE_CAPACITIES[dreamShow.venueSize] || ""} capacity
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-zinc-400">
+                {dreamShow.priceTierLabel} per ticket
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-400">
+              {dreamShow.priceTierLabel} per ticket
+            </p>
+          )}
 
           {/* Creator */}
           <p className="mt-4 text-sm text-zinc-400">
@@ -349,7 +383,7 @@ export default function DreamShowSharePage({
             className="h-auto flex-col gap-1.5 py-3"
           >
             <a
-              href={`mailto:?subject=${encodeURIComponent(`Dream Show: ${dreamShow.band.name} at ${dreamShow.venue.name}`)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`}
+              href={`mailto:?subject=${encodeURIComponent(`Dream Show: ${dreamShow.band.name}${dreamShow.venue ? ` at ${dreamShow.venue.name}` : ""}`)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`}
             >
               <Mail className="h-5 w-5 text-blue-600" />
               <span className="text-xs">Email</span>

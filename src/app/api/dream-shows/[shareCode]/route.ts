@@ -49,6 +49,8 @@ export async function GET(
         shareCode: dreamShow.shareCode,
         band: dreamShow.band,
         venue: dreamShow.venue,
+        venueSize: dreamShow.venueSize,
+        venueSizeLabel: dreamShow.venueSizeLabel,
         maxTicketPrice: dreamShow.maxTicketPrice,
         priceTierLabel: dreamShow.priceTierLabel,
         message: dreamShow.message,
