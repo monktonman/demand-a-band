@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Ticket, Heart, Music2, MapPin, Calendar, Users, ExternalLink } from "lucide-react";
+import { Ticket, Heart, Music2, MapPin, Calendar, Users, ExternalLink, Sliders } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
 
-  const [pledges, bandPrefs, cityPrefs] = await Promise.all([
+  const [pledges, bandPrefs, cityPrefs, genrePrefs] = await Promise.all([
     prisma.pledge.findMany({
       where: { userId: session.user.id },
       include: {
@@ -54,6 +54,9 @@ export default async function DashboardPage() {
     prisma.userCityPreference.findMany({
       where: { userId: session.user.id },
     }),
+    prisma.userGenrePreference.findMany({
+      where: { userId: session.user.id },
+    }),
   ]);
 
   const activePledges = pledges.filter((p) => p.status === "ACTIVE");
@@ -61,7 +64,6 @@ export default async function DashboardPage() {
     (sum, p) => sum + Number(p.totalAmount),
     0
   );
-  const dreamShows = bandPrefs.filter((p) => p.isDreamShow);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -90,16 +92,16 @@ export default async function DashboardPage() {
             <Heart className="h-8 w-8 text-pink-600" />
             <div>
               <p className="text-2xl font-bold">{bandPrefs.length}</p>
-              <p className="text-xs text-zinc-500">Bands Followed</p>
+              <p className="text-xs text-zinc-500">Bands</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Music2 className="h-8 w-8 text-amber-600" />
+            <Sliders className="h-8 w-8 text-purple-600" />
             <div>
-              <p className="text-2xl font-bold">{dreamShows.length}</p>
-              <p className="text-xs text-zinc-500">Dream Shows</p>
+              <p className="text-2xl font-bold">{genrePrefs.length}</p>
+              <p className="text-xs text-zinc-500">Genres</p>
             </div>
           </CardContent>
         </Card>
@@ -223,15 +225,15 @@ export default async function DashboardPage() {
 
       {/* Bottom row — Preferences */}
       <div className="grid gap-8 lg:grid-cols-2">
-        {/* My Band Preferences */}
+        {/* My Music (Bands & Genres) */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-pink-600" />
-                My Band Preferences
+                <Music2 className="h-5 w-5 text-orange-600" />
+                My Music
               </CardTitle>
-              <Link href="/onboarding">
+              <Link href="/preferences">
                 <Button variant="outline" size="sm">
                   Edit
                 </Button>
@@ -239,38 +241,73 @@ export default async function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {bandPrefs.length > 0 ? (
-              <div className="space-y-2">
-                {bandPrefs.slice(0, 8).map((pref) => (
-                  <div
-                    key={pref.id}
-                    className="flex items-center justify-between rounded-lg border p-2.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded bg-orange-50">
-                        <Music2 className="h-4 w-4 text-orange-500" />
+            {bandPrefs.length > 0 || genrePrefs.length > 0 ? (
+              <div className="space-y-4">
+                {/* Genre chips */}
+                {genrePrefs.length > 0 && (
+                  <div>
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <Sliders className="h-3.5 w-3.5 text-zinc-400" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                        Genres ({genrePrefs.length})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {genrePrefs.map((pref) => (
+                        <Badge
+                          key={pref.id}
+                          variant="secondary"
+                          className="bg-purple-100 text-purple-700 text-xs"
+                        >
+                          {pref.genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Band list */}
+                {bandPrefs.length > 0 && (
+                  <div>
+                    {genrePrefs.length > 0 && (
+                      <div className="mb-1.5 flex items-center gap-1.5">
+                        <Heart className="h-3.5 w-3.5 text-zinc-400" />
+                        <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                          Bands ({bandPrefs.length})
+                        </span>
                       </div>
-                      <span className="font-medium text-sm">{pref.band.name}</span>
-                      {pref.isDreamShow && (
-                        <Badge className="bg-amber-500 text-xs">Dream</Badge>
+                    )}
+                    <div className="space-y-2">
+                      {bandPrefs.slice(0, 8).map((pref) => (
+                        <div
+                          key={pref.id}
+                          className="flex items-center justify-between rounded-lg border p-2.5"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded bg-orange-50">
+                              <Music2 className="h-4 w-4 text-orange-500" />
+                            </div>
+                            <span className="font-medium text-sm">{pref.band.name}</span>
+                            {pref.isDreamShow && (
+                              <Badge className="bg-amber-500 text-xs">Dream</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {bandPrefs.length > 8 && (
+                        <p className="pt-1 text-center text-xs text-zinc-400">
+                          + {bandPrefs.length - 8} more
+                        </p>
                       )}
                     </div>
-                    <span className="text-sm text-zinc-500">
-                      up to {formatCurrency(Number(pref.maxTicketPrice))}
-                    </span>
                   </div>
-                ))}
-                {bandPrefs.length > 8 && (
-                  <p className="pt-1 text-center text-xs text-zinc-400">
-                    + {bandPrefs.length - 8} more
-                  </p>
                 )}
               </div>
             ) : (
               <div className="py-6 text-center text-zinc-400">
-                <Heart className="mx-auto mb-2 h-8 w-8" />
-                <p>No preferences set</p>
-                <Link href="/onboarding">
+                <Music2 className="mx-auto mb-2 h-8 w-8" />
+                <p>No music preferences set</p>
+                <Link href="/preferences">
                   <Button variant="link" className="mt-1 text-orange-600">
                     Set up preferences
                   </Button>
@@ -286,9 +323,9 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-blue-600" />
-                My City Preferences
+                My Locations
               </CardTitle>
-              <Link href="/onboarding">
+              <Link href="/preferences">
                 <Button variant="outline" size="sm">
                   Edit
                 </Button>
@@ -316,7 +353,7 @@ export default async function DashboardPage() {
               <div className="py-6 text-center text-zinc-400">
                 <MapPin className="mx-auto mb-2 h-8 w-8" />
                 <p>No cities set</p>
-                <Link href="/onboarding">
+                <Link href="/preferences">
                   <Button variant="link" className="mt-1 text-orange-600">
                     Add cities
                   </Button>
