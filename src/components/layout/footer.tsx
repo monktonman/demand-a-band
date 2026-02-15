@@ -15,22 +15,16 @@ export function Footer() {
 
           <nav className="flex gap-6">
             <Link
-              href="/events"
-              className="text-sm text-zinc-500 hover:text-zinc-900"
-            >
-              Shows
-            </Link>
-            <Link
-              href="/dream-show"
-              className="text-sm text-zinc-500 hover:text-zinc-900"
-            >
-              Dream Show
-            </Link>
-            <Link
               href="/#how-it-works"
               className="text-sm text-zinc-500 hover:text-zinc-900"
             >
               How It Works
+            </Link>
+            <Link
+              href="/contact"
+              className="text-sm text-zinc-500 hover:text-zinc-900"
+            >
+              Contact Us
             </Link>
           </nav>
 
