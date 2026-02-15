@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { EventCard } from "@/components/events/event-card";
+import { EventsView } from "@/components/events/events-view";
 import { Music } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,23 @@ export default async function EventsPage() {
     orderBy: { eventDate: "asc" },
   });
 
+  // Serialize dates and Decimals for client component
+  const serializedEvents = events.map((e) => ({
+    ...e,
+    eventDate: e.eventDate.toISOString(),
+    windowStart: e.windowStart?.toISOString() ?? null,
+    windowEnd: e.windowEnd?.toISOString() ?? null,
+    ticketPrice: e.ticketPrice.toString(),
+    serviceFee: e.serviceFee.toString(),
+    pledgeDeadline: e.pledgeDeadline.toISOString(),
+    createdAt: e.createdAt.toISOString(),
+    updatedAt: e.updatedAt.toISOString(),
+    confirmedAt: e.confirmedAt?.toISOString() ?? null,
+    cancelledAt: e.cancelledAt?.toISOString() ?? null,
+    doorsTime: e.doorsTime?.toISOString() ?? null,
+    showTime: e.showTime?.toISOString() ?? null,
+  }));
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-8">
@@ -27,11 +44,7 @@ export default async function EventsPage() {
       </div>
 
       {events.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
+        <EventsView events={serializedEvents} />
       ) : (
         <div className="py-24 text-center">
           <Music className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
