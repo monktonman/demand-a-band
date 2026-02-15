@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | Demand A Band",
   },
   description:
-    "Crowd-powered concert booking. Tell us who you want to see, and we'll make it happen.",
+    "Share your music preferences and we'll find shows for you — or dream up the perfect concert and rally fans to make it real. You only pay when enough people commit.",
 };
 
 export default function RootLayout({

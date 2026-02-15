@@ -111,7 +111,7 @@ export default function BandsPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Browse Artists</h1>
         <p className="mt-1 text-zinc-500">
-          Discover {total.toLocaleString()} artists — demand the ones you want in Baltimore
+          Browse {total.toLocaleString()} artists — add them to your preferences to signal demand
         </p>
       </div>
 

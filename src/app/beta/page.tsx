@@ -109,7 +109,7 @@ export default function BetaGatePage() {
 
         {/* Footer */}
         <p className="text-center text-gray-600 text-xs mt-6">
-          demanda.band &middot; Baltimore&apos;s Concert Demand Platform
+          demanda.band &middot; Baltimore&apos;s Crowd-Powered Concert Platform
         </p>
       </div>
     </div>

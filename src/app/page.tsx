@@ -7,14 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import {
   Music,
   Users,
-  Ticket,
-  TrendingUp,
   Sparkles,
   MapPin,
   Shield,
   ArrowRight,
-  Star,
   Zap,
+  Sliders,
+  Heart,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
@@ -58,14 +57,15 @@ export default async function HomePage() {
               Baltimore&apos;s crowd-powered concert platform
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
-              Demand the shows{" "}
+              You pick the music.{" "}
               <span className="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">
-                you want to see
+                We make it happen.
               </span>
             </h1>
             <p className="mt-6 text-lg leading-8 text-zinc-300 sm:text-xl">
-              Tell us which artists you want in Baltimore. When enough fans
-              demand it, we book the show. You only pay if it happens.
+              Share your music preferences and we&apos;ll find shows for you — or
+              dream up the perfect concert and rally fans to make it real.
+              Either way, you only pay when enough people commit.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href="/register">
@@ -107,7 +107,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* Two Ways It Works */}
       <section id="how-it-works" className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
@@ -115,54 +115,130 @@ export default async function HomePage() {
               How It Works
             </Badge>
             <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
-              Three steps to your next unforgettable show
+              Two ways to get the shows you want
             </h2>
             <p className="mt-4 text-lg text-zinc-600">
               No gatekeepers. No algorithms. Just real fans making shows happen.
             </p>
           </div>
 
-          <div className="mt-16 grid gap-8 sm:grid-cols-3">
-            <div className="relative rounded-2xl border bg-zinc-50 p-8 transition-shadow hover:shadow-lg">
-              <div className="absolute -top-3 left-8 flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
-                1
+          <div className="mt-16 grid gap-12 lg:grid-cols-2">
+            {/* Path 1: Discover Shows */}
+            <div className="rounded-2xl border-2 border-zinc-200 bg-zinc-50 p-8">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-orange-100 px-3 py-1 text-sm font-medium text-orange-700">
+                <Sliders className="h-4 w-4" />
+                Discover Shows
               </div>
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
-                <Users className="h-6 w-6 text-orange-600" />
-              </div>
-              <h3 className="text-xl font-semibold">Tell us who</h3>
+              <h3 className="text-2xl font-bold text-zinc-900">
+                Tell us your taste, we&apos;ll find the shows
+              </h3>
               <p className="mt-3 text-zinc-600">
-                Sign up and tell us which artists you&apos;d love to see live in
-                Baltimore — and what you&apos;d be willing to pay.
+                Share your favorite bands, genres, and where you want to see
+                shows. We match you with proposed events based on fan demand in
+                your market.
               </p>
+              <div className="mt-6 space-y-4">
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium">Set your preferences</p>
+                    <p className="text-sm text-zinc-500">
+                      Pick your bands, genres, and location
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium">We propose shows</p>
+                    <p className="text-sm text-zinc-500">
+                      When enough fans want the same thing, we work with venues
+                      to propose a show
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium">Commit and go</p>
+                    <p className="text-sm text-zinc-500">
+                      Pledge for tickets — you only pay if enough people commit
+                      and the show is confirmed
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <Link href="/register">
+                <Button className="mt-6 bg-orange-600 hover:bg-orange-700">
+                  Set Your Preferences
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
 
-            <div className="relative rounded-2xl border bg-zinc-50 p-8 transition-shadow hover:shadow-lg">
-              <div className="absolute -top-3 left-8 flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
-                2
+            {/* Path 2: Dream Shows */}
+            <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-8">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-700">
+                <Sparkles className="h-4 w-4" />
+                Dream Shows
               </div>
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
-                <TrendingUp className="h-6 w-6 text-orange-600" />
-              </div>
-              <h3 className="text-xl font-semibold">We gauge demand</h3>
+              <h3 className="text-2xl font-bold text-zinc-900">
+                Imagine the perfect show — then make it real
+              </h3>
               <p className="mt-3 text-zinc-600">
-                We aggregate demand signals from fans like you. When we see
-                enough interest, we work with venues to propose a show.
+                Pick your dream artist, choose a venue size, set a price
+                signal, and share it. When enough fans say they&apos;d go,
+                event planners can make it happen.
               </p>
-            </div>
-
-            <div className="relative rounded-2xl border bg-zinc-50 p-8 transition-shadow hover:shadow-lg">
-              <div className="absolute -top-3 left-8 flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-xs font-bold text-white">
-                3
+              <div className="mt-6 space-y-4">
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium">Build your dream show</p>
+                    <p className="text-sm text-zinc-500">
+                      Pick an artist, a venue, and what you&apos;d pay
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium">Rally your friends</p>
+                    <p className="text-sm text-zinc-500">
+                      Share your dream show link — the more fans who opt in, the
+                      more likely it happens
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium">Event planners take notice</p>
+                    <p className="text-sm text-zinc-500">
+                      Real demand data helps promoters offer the show to the
+                      people who already said they&apos;d go
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
-                <Ticket className="h-6 w-6 text-orange-600" />
-              </div>
-              <h3 className="text-xl font-semibold">Pledge & go</h3>
-              <p className="mt-3 text-zinc-600">
-                Pledge for tickets when a show is proposed. You only get
-                charged if enough pledges come in and the show is confirmed.
-              </p>
+              <Link href="/dream-show">
+                <Button className="mt-6 bg-amber-600 hover:bg-amber-700">
+                  Create a Dream Show
+                  <Sparkles className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -251,74 +327,6 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Dream Show CTA */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 py-20">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 text-sm font-medium text-white">
-              <Sparkles className="h-4 w-4" />
-              Premium Experiences
-            </div>
-            <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Dream Show Experience
-            </h2>
-            <p className="mt-4 text-lg text-orange-100">
-              Imagine your favorite stadium act performing in a 400-seat room.
-              Premium, once-in-a-lifetime experiences powered by real fan
-              demand. Tell us your dream show and we&apos;ll see if the demand
-              is there.
-            </p>
-
-            {/* Dream show examples */}
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              {[
-                {
-                  artist: "Radiohead",
-                  venue: "The 8x10",
-                  fans: "42 fans",
-                },
-                {
-                  artist: "Foo Fighters",
-                  venue: "Ottobar",
-                  fans: "67 fans",
-                },
-                {
-                  artist: "Beyoncé",
-                  venue: "Rams Head",
-                  fans: "156 fans",
-                },
-              ].map((example) => (
-                <div
-                  key={example.artist}
-                  className="rounded-lg bg-white/10 p-4 text-left backdrop-blur-sm"
-                >
-                  <p className="font-semibold text-white">{example.artist}</p>
-                  <p className="text-sm text-orange-200">
-                    at {example.venue}
-                  </p>
-                  <p className="mt-1 text-xs text-orange-300">
-                    <Star className="mr-1 inline h-3 w-3" />
-                    {example.fans} would pay premium
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <Link href="/dream-show">
-              <Button
-                size="lg"
-                variant="outline"
-                className="mt-8 border-white bg-transparent text-base text-white hover:bg-white hover:text-orange-600"
-              >
-                Tell us your dream show
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Why DAB */}
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -334,25 +342,25 @@ export default async function HomePage() {
                 icon: Shield,
                 title: "Zero Risk",
                 description:
-                  "Your card is only charged if the show is confirmed. No show, no charge.",
+                  "You only pay if the show is confirmed. No show, no charge. Ever.",
               },
               {
                 icon: Users,
                 title: "Fan-Powered",
                 description:
-                  "No more waiting for promoters to book your favorite act. YOU drive the demand.",
+                  "No more waiting for promoters. You tell us what you want, and real demand makes it happen.",
               },
               {
-                icon: MapPin,
-                title: "Local Venues",
+                icon: Heart,
+                title: "Personalized",
                 description:
-                  "We work with Baltimore's best independent venues. Intimate shows, real connections.",
+                  "Set your bands, genres, and location — we match you with shows you actually want to see.",
               },
               {
                 icon: Sparkles,
-                title: "Dream Shows",
+                title: "Dream Big",
                 description:
-                  "See stadium acts in a 400-cap room. Premium experiences that money can't normally buy.",
+                  "Imagine any artist at any venue. Build a dream show, rally fans, and watch it come to life.",
               },
             ].map((feature) => (
               <div key={feature.title} className="text-center">
