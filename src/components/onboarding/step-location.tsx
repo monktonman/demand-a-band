@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, MapPin, Plus, X } from "lucide-react";
+import { ChevronLeft, Loader2, MapPin, Plus, X } from "lucide-react";
 import type { CityPreference } from "@/app/(main)/onboarding/page";
 
 interface StepLocationProps {
@@ -13,6 +13,7 @@ interface StepLocationProps {
   setCityPreferences: React.Dispatch<React.SetStateAction<CityPreference[]>>;
   onNext: () => void;
   onBack: () => void;
+  isSubmitting?: boolean;
 }
 
 const SUGGESTED_CITIES = [
@@ -28,6 +29,7 @@ export function StepLocation({
   setCityPreferences,
   onNext,
   onBack,
+  isSubmitting,
 }: StepLocationProps) {
   const addCity = (city: string, state: string) => {
     // Don't add duplicates
@@ -154,17 +156,23 @@ export function StepLocation({
 
       {/* Navigation */}
       <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="outline" onClick={onBack} disabled={isSubmitting}>
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back
         </Button>
         <Button
           onClick={onNext}
-          disabled={cityPreferences.length === 0}
+          disabled={cityPreferences.length === 0 || isSubmitting}
           className="bg-orange-600 hover:bg-orange-700"
         >
-          Continue
-          <ChevronRight className="ml-1 h-4 w-4" />
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Preferences"
+          )}
         </Button>
       </div>
     </div>

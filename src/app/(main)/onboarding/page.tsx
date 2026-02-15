@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
 import { Music, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DEFAULT_TICKET_PRICE } from "@/lib/constants";
 import { StepBands } from "@/components/onboarding/step-bands";
 import { StepLocation } from "@/components/onboarding/step-location";
-import { StepPricing } from "@/components/onboarding/step-pricing";
 import { StepComplete } from "@/components/onboarding/step-complete";
 
 export interface SelectedBand {
@@ -16,8 +16,6 @@ export interface SelectedBand {
   name: string;
   genres: string[];
   imageUrl?: string | null;
-  maxTicketPrice: number;
-  isDreamShow: boolean;
   source?: "manual" | "spotify";
 }
 
@@ -32,10 +30,6 @@ const STEPS = [
   {
     title: "Your Location",
     description: "Where do you want to see shows?",
-  },
-  {
-    title: "Set Your Prices",
-    description: "What would you pay per ticket?",
   },
   {
     title: "You're All Set!",
@@ -78,8 +72,6 @@ function OnboardingContent() {
                   name: b.name,
                   genres: b.genres,
                   imageUrl: b.imageUrl,
-                  maxTicketPrice: 50,
-                  isDreamShow: false,
                   source: "spotify" as const,
                 }));
               return [...prev, ...newBands];
@@ -149,9 +141,9 @@ function OnboardingContent() {
         body: JSON.stringify({
           bandPreferences: selectedBands.map((band, i) => ({
             bandId: band.id,
-            maxTicketPrice: band.maxTicketPrice,
+            maxTicketPrice: DEFAULT_TICKET_PRICE,
             priority: i + 1,
-            isDreamShow: band.isDreamShow,
+            isDreamShow: false,
           })),
           cityPreferences,
         }),
@@ -241,25 +233,15 @@ function OnboardingContent() {
         <StepLocation
           cityPreferences={cityPreferences}
           setCityPreferences={setCityPreferences}
-          onNext={handleNext}
-          onBack={handleBack}
-        />
-      )}
-
-      {currentStep === 2 && (
-        <StepPricing
-          selectedBands={selectedBands}
-          setSelectedBands={setSelectedBands}
-          onSave={handleSavePreferences}
+          onNext={handleSavePreferences}
           onBack={handleBack}
           isSubmitting={isSubmitting}
         />
       )}
 
-      {currentStep === 3 && (
+      {currentStep === 2 && (
         <StepComplete
           bandCount={selectedBands.length}
-          dreamShowCount={selectedBands.filter((b) => b.isDreamShow).length}
           onFinish={handleFinish}
         />
       )}

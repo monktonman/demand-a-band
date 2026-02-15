@@ -5,13 +5,13 @@ import { CheckCircle, Music, Sparkles, ArrowRight } from "lucide-react";
 
 interface StepCompleteProps {
   bandCount: number;
-  dreamShowCount: number;
+  dreamShowCount?: number;
   onFinish: () => void;
 }
 
 export function StepComplete({
   bandCount,
-  dreamShowCount,
+  dreamShowCount = 0,
   onFinish,
 }: StepCompleteProps) {
   return (
