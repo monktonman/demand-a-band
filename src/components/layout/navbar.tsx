@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Music } from "lucide-react";
+import { Music, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
 import { NotificationBell } from "@/components/layout/notification-bell";
@@ -11,6 +12,7 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 export function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
     { href: "/bands", label: "Artists" },
@@ -40,7 +42,7 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* Navigation — centered */}
+        {/* Desktop Navigation — centered */}
         <nav className="hidden flex-1 items-center justify-center gap-1 md:flex">
           {navLinks.map((link) => (
             <Link
@@ -71,20 +73,65 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Link href="/login">
+              <Link href="/login" className="hidden sm:block">
                 <Button variant="ghost" size="sm">
                   Sign in
                 </Button>
               </Link>
-              <Link href="/register">
+              <Link href="/register" className="hidden sm:block">
                 <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
                   Sign up
                 </Button>
               </Link>
             </>
           )}
+
+          {/* Mobile hamburger */}
+          <button
+            className="ml-1 flex h-9 w-9 items-center justify-center rounded-md text-zinc-600 hover:bg-zinc-100 md:hidden"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="border-t bg-white px-4 pb-4 pt-2 md:hidden">
+          <nav className="flex flex-col gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className={`rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "bg-orange-50 text-orange-700"
+                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          {!session && status !== "loading" && (
+            <div className="mt-3 flex flex-col gap-2 border-t pt-3">
+              <Link href="/login" onClick={() => setMobileOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full justify-center">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href="/register" onClick={() => setMobileOpen(false)}>
+                <Button size="sm" className="w-full justify-center bg-orange-600 hover:bg-orange-700">
+                  Sign up
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 }
