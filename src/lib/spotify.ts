@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { slugify } from "@/lib/utils";
 
 // ------------------------------------
 // Configuration
@@ -171,6 +172,7 @@ export async function getSpotifyUserId(
 
 // ------------------------------------
 // Match artists to DAB catalog
+// (Auto-creates bands for unmatched Spotify artists)
 // ------------------------------------
 
 interface MatchResult {
@@ -182,18 +184,18 @@ interface MatchResult {
     imageUrl: string | null;
     popularity: number | null;
   }>;
-  unmatchedCount: number;
+  newlyCreated: number;
+  alreadyExisted: number;
 }
 
 export async function matchArtistsToCatalog(
   spotifyArtists: SpotifyArtist[]
 ): Promise<MatchResult> {
   if (spotifyArtists.length === 0) {
-    return { matched: [], unmatchedCount: 0 };
+    return { matched: [], newlyCreated: 0, alreadyExisted: 0 };
   }
 
   const spotifyIds = spotifyArtists.map((a) => a.spotifyId);
-  const spotifyNames = spotifyArtists.map((a) => a.name.toLowerCase());
 
   // Strategy 1: Exact match by Spotify ID
   const idMatches = await prisma.band.findMany({
@@ -216,17 +218,14 @@ export async function matchArtistsToCatalog(
   );
 
   // Strategy 2: Case-insensitive name match for remaining
-  const unmatchedArtists = spotifyArtists.filter(
+  const unmatchedAfterIds = spotifyArtists.filter(
     (a) => !matchedSpotifyIds.has(a.spotifyId)
   );
 
   let nameMatches: typeof idMatches = [];
-  if (unmatchedArtists.length > 0) {
-    // Get all bands and match by lowercased name
-    // (Prisma doesn't support IN + mode: insensitive, so we do it in batches)
-    const unmatchedNames = unmatchedArtists.map((a) => a.name);
+  if (unmatchedAfterIds.length > 0) {
+    const unmatchedNames = unmatchedAfterIds.map((a) => a.name);
 
-    // Use OR query with individual name checks
     nameMatches = await prisma.band.findMany({
       where: {
         OR: unmatchedNames.map((name) => ({
@@ -245,13 +244,15 @@ export async function matchArtistsToCatalog(
     });
   }
 
-  // Combine and deduplicate
+  // Collect all existing matches
   const allMatchedIds = new Set<string>();
+  const allMatchedSpotifyIds = new Set<string>();
   const allMatched: MatchResult["matched"] = [];
 
   for (const band of [...idMatches, ...nameMatches]) {
     if (!allMatchedIds.has(band.id)) {
       allMatchedIds.add(band.id);
+      if (band.spotifyId) allMatchedSpotifyIds.add(band.spotifyId);
       allMatched.push({
         id: band.id,
         name: band.name,
@@ -263,10 +264,75 @@ export async function matchArtistsToCatalog(
     }
   }
 
-  const totalUnmatched = spotifyArtists.length - allMatched.length;
+  // Also collect name-matched Spotify IDs (for bands matched by name, not ID)
+  const nameMatchedNames = new Set(nameMatches.map((b) => b.name.toLowerCase()));
+
+  const alreadyExisted = allMatched.length;
+
+  // Strategy 3: Auto-create bands for unmatched Spotify artists
+  const stillUnmatched = spotifyArtists.filter(
+    (a) =>
+      !allMatchedSpotifyIds.has(a.spotifyId) &&
+      !nameMatchedNames.has(a.name.toLowerCase())
+  );
+
+  if (stillUnmatched.length > 0) {
+    console.log(
+      `[Spotify] Auto-creating ${stillUnmatched.length} new bands from Spotify import`
+    );
+
+    for (const artist of stillUnmatched) {
+      try {
+        // Generate a unique slug
+        let baseSlug = slugify(artist.name);
+        let slug = baseSlug;
+        let attempt = 0;
+
+        // Check for slug collisions
+        while (true) {
+          const existing = await prisma.band.findUnique({
+            where: { slug },
+            select: { id: true },
+          });
+          if (!existing) break;
+          attempt++;
+          slug = `${baseSlug}-${attempt}`;
+        }
+
+        const newBand = await prisma.band.create({
+          data: {
+            name: artist.name,
+            slug,
+            genres: artist.genres,
+            imageUrl: artist.imageUrl,
+            spotifyId: artist.spotifyId,
+            spotifyUrl: artist.spotifyUrl || `https://open.spotify.com/artist/${artist.spotifyId}`,
+            popularity: artist.popularity,
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            genres: true,
+            imageUrl: true,
+            popularity: true,
+          },
+        });
+
+        allMatched.push(newBand);
+      } catch (err) {
+        // Skip if creation fails (e.g., unique constraint on spotifyId)
+        console.error(
+          `[Spotify] Failed to create band for "${artist.name}":`,
+          err
+        );
+      }
+    }
+  }
 
   return {
     matched: allMatched,
-    unmatchedCount: Math.max(0, totalUnmatched),
+    newlyCreated: allMatched.length - alreadyExisted,
+    alreadyExisted,
   };
 }

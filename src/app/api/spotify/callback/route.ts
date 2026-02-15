@@ -87,15 +87,15 @@ export async function GET(req: NextRequest) {
     const topArtists = await fetchTopArtists(tokens.access_token);
     console.log(`[Spotify] Fetched ${topArtists.length} top artists for user ${spotifyUserId}`);
 
-    // Match against band catalog
-    const { matched, unmatchedCount } =
+    // Match against band catalog (auto-creates new bands for unmatched artists)
+    const { matched, newlyCreated, alreadyExisted } =
       await matchArtistsToCatalog(topArtists);
-    console.log(`[Spotify] Matched ${matched.length} bands, ${unmatchedCount} unmatched. Matched: ${matched.map(b => b.name).join(', ') || 'none'}`);
+    console.log(`[Spotify] ${matched.length} total bands (${alreadyExisted} existed, ${newlyCreated} newly created). Sample: ${matched.slice(0, 10).map(b => b.name).join(', ')}`);
 
     // Store matched band IDs in a cookie for the return page
     const matchedIds = matched.map((b) => b.id);
     const response = NextResponse.redirect(
-      `${baseUrl}${returnTo}?spotify=success&matched=${matched.length}&unmatched=${unmatchedCount}`
+      `${baseUrl}${returnTo}?spotify=success&matched=${matched.length}&new=${newlyCreated}&existing=${alreadyExisted}`
     );
 
     // Store matched IDs (cookie has a 4KB limit, so we use JSON)

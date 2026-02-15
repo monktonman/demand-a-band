@@ -63,8 +63,7 @@ function OnboardingContent() {
     if (!spotifyStatus) return;
 
     if (spotifyStatus === "success") {
-      // Fetch matched bands from cookie
-      const unmatchedCount = searchParams.get("unmatched") || "0";
+      const newCount = searchParams.get("new") || "0";
 
       fetch("/api/spotify/matches")
         .then((res) => res.json())
@@ -86,15 +85,16 @@ function OnboardingContent() {
               return [...prev, ...newBands];
             });
             setSpotifyImported(true);
+            const newNum = parseInt(newCount);
             setSpotifyMessage(
-              `Imported ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
+              newNum > 0
+                ? `Imported ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from Spotify! (${newNum} new to our catalog)`
+                : `Imported ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
             );
           } else {
             setSpotifyImported(true);
             setSpotifyMessage(
-              parseInt(unmatchedCount) > 0
-                ? `Spotify connected! We found ${unmatchedCount} of your top artists but none are in our catalog yet. You can still pick bands manually below.`
-                : `Spotify connected but we couldn't find any top artists in your account. Pick bands manually below!`
+              "Spotify connected but we couldn't find any top artists in your account. Pick bands manually below!"
             );
           }
         })
