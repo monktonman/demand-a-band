@@ -339,10 +339,10 @@ enum NotificationType {
 
 model ExternalEvent {
   id         String   @id @default(cuid())
-  externalId String   @unique // Ticketmaster event ID
+  externalId String // Source-specific event ID
   name       String
   artistName String
-  genres     String[] // from TM classifications
+  genres     String[] // from API classifications
   venueName  String
   venueCity  String
   venueState String
@@ -352,10 +352,11 @@ model ExternalEvent {
   ticketUrl  String? // link to buy tickets
   priceMin   Decimal? @db.Decimal(10, 2)
   priceMax   Decimal? @db.Decimal(10, 2)
-  source     String   @default("ticketmaster")
+  source     String   @default("ticketmaster") // "ticketmaster" or "seatgeek"
   fetchedAt  DateTime @default(now()) // when we cached it
   createdAt  DateTime @default(now())
 
+  @@unique([externalId, source]) // same event ID can exist across different sources
   @@index([eventDate])
   @@index([artistName])
 }
