@@ -548,36 +548,17 @@ function PreferencesContent() {
       )}
 
       <div className="space-y-8">
-        {/* ═══ SECTION 0: GENRES ═══ */}
-        <section>
-          <div className="mb-4 flex items-center gap-2">
-            <Sliders className="h-5 w-5 text-orange-600" />
-            <h2 className="text-lg font-semibold">Your Genres</h2>
-            {selectedGenres.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {selectedGenres.length}
-              </Badge>
-            )}
-          </div>
-          <GenrePreferenceSelector
-            selectedGenres={selectedGenres}
-            onToggle={(genre) =>
-              setSelectedGenres((prev) =>
-                prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
-              )
-            }
-          />
-        </section>
-
-        {/* ═══ SECTION 1: BANDS ═══ */}
+        {/* ═══ YOUR MUSIC (BANDS & GENRES) ═══ */}
         <section>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Music className="h-5 w-5 text-orange-600" />
-              <h2 className="text-lg font-semibold">Your Bands</h2>
-              <Badge variant="secondary" className="ml-1">
-                {selectedBands.length}
-              </Badge>
+              <h2 className="text-lg font-semibold">Your Music</h2>
+              {(selectedBands.length > 0 || selectedGenres.length > 0) && (
+                <Badge variant="secondary" className="ml-1">
+                  {selectedBands.length + selectedGenres.length}
+                </Badge>
+              )}
             </div>
             <div className="flex gap-2">
               {showSpotify && (
@@ -622,33 +603,97 @@ function PreferencesContent() {
             </div>
           </div>
 
-          {/* Current band chips */}
-          {selectedBands.length > 0 ? (
-            <div className="mb-4 flex flex-wrap gap-1.5">
-              {selectedBands.map((band) => (
-                <Badge
-                  key={band.id}
-                  variant="secondary"
-                  className="gap-1 py-0.5 pl-2.5 pr-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200"
-                >
-                  {band.name}
-                  <button
-                    onClick={() => removeBand(band.id)}
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-orange-300/50"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
-              ))}
+          {/* ── Current selections summary ── */}
+          <div className="mb-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
+            {/* Genre selections */}
+            <div>
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <Sliders className="h-3.5 w-3.5 text-zinc-500" />
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Genres
+                  {selectedGenres.length > 0 && (
+                    <span className="ml-1 text-orange-600">({selectedGenres.length})</span>
+                  )}
+                </h3>
+              </div>
+              {selectedGenres.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedGenres.map((genre) => (
+                    <Badge
+                      key={genre}
+                      variant="secondary"
+                      className="gap-1 py-0.5 pl-2.5 pr-1 text-xs bg-purple-100 text-purple-700 hover:bg-purple-200"
+                    >
+                      {genre}
+                      <button
+                        onClick={() =>
+                          setSelectedGenres((prev) =>
+                            prev.filter((g) => g !== genre)
+                          )
+                        }
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-purple-300/50"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-400">No genres selected — pick some below to broaden your matches</p>
+              )}
             </div>
-          ) : (
-            <div className="mb-4 rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-400">
-              No bands selected yet. Click &ldquo;Add Bands&rdquo; to browse or
-              import from Spotify.
-            </div>
-          )}
 
-          {/* Band browser (expandable) */}
+            {/* Divider */}
+            <div className="border-t border-zinc-200" />
+
+            {/* Band selections */}
+            <div>
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <Music className="h-3.5 w-3.5 text-zinc-500" />
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Bands
+                  {selectedBands.length > 0 && (
+                    <span className="ml-1 text-orange-600">({selectedBands.length})</span>
+                  )}
+                </h3>
+              </div>
+              {selectedBands.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedBands.map((band) => (
+                    <Badge
+                      key={band.id}
+                      variant="secondary"
+                      className="gap-1 py-0.5 pl-2.5 pr-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200"
+                    >
+                      {band.name}
+                      <button
+                        onClick={() => removeBand(band.id)}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-orange-300/50"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-400">No bands selected — browse below or import from Spotify</p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Genre preference picker ── */}
+          <div className="mb-5">
+            <GenrePreferenceSelector
+              selectedGenres={selectedGenres}
+              onToggle={(genre) =>
+                setSelectedGenres((prev) =>
+                  prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
+                )
+              }
+            />
+          </div>
+
+          {/* ── Band browser (expandable) ── */}
           {showBandBrowser && (
             <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
               {/* Tab bar */}

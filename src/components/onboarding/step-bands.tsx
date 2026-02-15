@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, X, ChevronRight, Loader2 } from "lucide-react";
+import { Search, X, ChevronRight, Loader2, Music, Sliders } from "lucide-react";
 import { GENRES } from "@/lib/constants";
 import { BandSelectionCard } from "./band-selection-card";
 import { GenreChips } from "./genre-chips";
@@ -232,50 +232,96 @@ export function StepBands({
 
   return (
     <div className="space-y-5">
-      {/* Genre preferences */}
+      {/* ── Current selections summary ── */}
+      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-zinc-700">Your Selections</h3>
+          <span className="text-xs text-zinc-400">
+            {selectedBands.length < 3
+              ? `Select at least ${3 - selectedBands.length} more band${3 - selectedBands.length !== 1 ? "s" : ""}`
+              : "Ready to continue!"}
+          </span>
+        </div>
+
+        {/* Genre selections */}
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <Sliders className="h-3.5 w-3.5 text-zinc-500" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Genres
+              {selectedGenres.length > 0 && (
+                <span className="ml-1 text-orange-600">({selectedGenres.length})</span>
+              )}
+            </h4>
+          </div>
+          {selectedGenres.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedGenres.map((genre) => (
+                <Badge
+                  key={genre}
+                  variant="secondary"
+                  className="gap-1 py-0.5 pl-2.5 pr-1 text-xs bg-purple-100 text-purple-700 hover:bg-purple-200"
+                >
+                  {genre}
+                  <button
+                    onClick={() => onToggleGenre(genre)}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-purple-300/50"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-400">No genres yet — pick some below (optional)</p>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-zinc-200" />
+
+        {/* Band selections */}
+        <div>
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <Music className="h-3.5 w-3.5 text-zinc-500" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Bands
+              {selectedBands.length > 0 && (
+                <span className="ml-1 text-orange-600">({selectedBands.length})</span>
+              )}
+            </h4>
+          </div>
+          {selectedBands.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedBands.map((band) => (
+                <Badge
+                  key={band.id}
+                  variant="secondary"
+                  className="gap-1 bg-orange-100 py-0.5 pl-2.5 pr-1 text-xs text-orange-700 hover:bg-orange-200"
+                >
+                  {band.name}
+                  <button
+                    onClick={() => removeBand(band.id)}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-orange-300/50"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-400">
+              Browse below or connect Spotify to get started
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Genre preference picker ── */}
       <GenrePreferenceSelector
         selectedGenres={selectedGenres}
         onToggle={onToggleGenre}
       />
-
-      {/* Selected bands bar */}
-      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-medium text-zinc-700">
-            {selectedBands.length === 0
-              ? "No bands selected yet"
-              : `${selectedBands.length} band${selectedBands.length !== 1 ? "s" : ""} selected`}
-          </h3>
-          <span className="text-xs text-zinc-400">
-            {selectedBands.length < 3
-              ? `${3 - selectedBands.length} more needed`
-              : "Ready to continue!"}
-          </span>
-        </div>
-        {selectedBands.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {selectedBands.map((band) => (
-              <Badge
-                key={band.id}
-                variant="secondary"
-                className="gap-1 bg-orange-100 py-0.5 pl-2.5 pr-1 text-xs text-orange-700 hover:bg-orange-200"
-              >
-                {band.name}
-                <button
-                  onClick={() => removeBand(band.id)}
-                  className="ml-0.5 rounded-full p-0.5 hover:bg-orange-300/50"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-zinc-400">
-            Browse below or connect Spotify to get started
-          </p>
-        )}
-      </div>
 
       {/* Spotify import button */}
       {showSpotify && !spotifyImported && onSpotifyConnect && (
@@ -435,7 +481,7 @@ export function StepBands({
         <p className="text-sm text-zinc-400">
           {selectedBands.length < 3
             ? `Select at least ${3 - selectedBands.length} more band${3 - selectedBands.length !== 1 ? "s" : ""}`
-            : `${selectedBands.length} bands selected`}
+            : `${selectedGenres.length > 0 ? `${selectedGenres.length} genre${selectedGenres.length !== 1 ? "s" : ""}, ` : ""}${selectedBands.length} band${selectedBands.length !== 1 ? "s" : ""} selected`}
         </p>
         <Button
           onClick={onNext}
