@@ -26,8 +26,9 @@ model User {
 
   accounts        Account[]
   sessions        Session[]
-  bandPreferences UserBandPreference[]
-  cityPreferences UserCityPreference[]
+  bandPreferences  UserBandPreference[]
+  cityPreferences  UserCityPreference[]
+  genrePreferences UserGenrePreference[]
   pledges         Pledge[]
   notifications   Notification[]
   dreamShows      DreamShow[]      @relation("dreamShowCreator")
@@ -129,6 +130,18 @@ model UserCityPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, city, state])
+}
+
+model UserGenrePreference {
+  id        String   @id @default(cuid())
+  userId    String
+  genre     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, genre])
+  @@index([genre])
 }
 
 // ============================================

@@ -43,6 +43,7 @@ function OnboardingContent() {
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedBands, setSelectedBands] = useState<SelectedBand[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [cityPreferences, setCityPreferences] = useState<CityPreference[]>([
     { city: "Baltimore", state: "MD", maxRadius: 50 },
   ]);
@@ -146,6 +147,7 @@ function OnboardingContent() {
             isDreamShow: false,
           })),
           cityPreferences,
+          genrePreferences: selectedGenres.map((genre) => ({ genre })),
         }),
       });
 
@@ -223,6 +225,12 @@ function OnboardingContent() {
         <StepBands
           selectedBands={selectedBands}
           setSelectedBands={setSelectedBands}
+          selectedGenres={selectedGenres}
+          onToggleGenre={(genre) =>
+            setSelectedGenres((prev) =>
+              prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
+            )
+          }
           onNext={handleNext}
           spotifyImported={spotifyImported}
           onSpotifyConnect={handleSpotifyConnect}

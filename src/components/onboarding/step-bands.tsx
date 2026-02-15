@@ -8,11 +8,14 @@ import { Search, X, ChevronRight, Loader2 } from "lucide-react";
 import { GENRES } from "@/lib/constants";
 import { BandSelectionCard } from "./band-selection-card";
 import { GenreChips } from "./genre-chips";
+import { GenrePreferenceSelector } from "./genre-preference-selector";
 import type { SelectedBand } from "@/app/(main)/onboarding/page";
 
 interface StepBandsProps {
   selectedBands: SelectedBand[];
   setSelectedBands: React.Dispatch<React.SetStateAction<SelectedBand[]>>;
+  selectedGenres: string[];
+  onToggleGenre: (genre: string) => void;
   onNext: () => void;
   spotifyImported?: boolean;
   onSpotifyConnect?: () => void;
@@ -32,6 +35,8 @@ type TabId = "popular" | "genres" | "search" | "spotify";
 export function StepBands({
   selectedBands,
   setSelectedBands,
+  selectedGenres,
+  onToggleGenre,
   onNext,
   spotifyImported,
   onSpotifyConnect,
@@ -227,6 +232,12 @@ export function StepBands({
 
   return (
     <div className="space-y-5">
+      {/* Genre preferences */}
+      <GenrePreferenceSelector
+        selectedGenres={selectedGenres}
+        onToggle={onToggleGenre}
+      />
+
       {/* Selected bands bar */}
       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
         <div className="mb-2 flex items-center justify-between">

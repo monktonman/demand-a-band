@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [bandPreferences, cityPreferences] = await Promise.all([
+  const [bandPreferences, cityPreferences, genrePreferences] = await Promise.all([
     prisma.userBandPreference.findMany({
       where: { userId: session.user.id },
       include: { band: true },
@@ -19,9 +19,12 @@ export async function GET() {
     prisma.userCityPreference.findMany({
       where: { userId: session.user.id },
     }),
+    prisma.userGenrePreference.findMany({
+      where: { userId: session.user.id },
+    }),
   ]);
 
-  return NextResponse.json({ bandPreferences, cityPreferences });
+  return NextResponse.json({ bandPreferences, cityPreferences, genrePreferences });
 }
 
 // POST: Save all preferences at once (during onboarding)
@@ -33,7 +36,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { bandPreferences, cityPreferences } = body;
+    const { bandPreferences, cityPreferences, genrePreferences } = body;
 
     // Use a transaction to save everything atomically
     await prisma.$transaction(async (tx) => {
@@ -42,6 +45,9 @@ export async function POST(req: Request) {
         where: { userId: session.user.id },
       });
       await tx.userCityPreference.deleteMany({
+        where: { userId: session.user.id },
+      });
+      await tx.userGenrePreference.deleteMany({
         where: { userId: session.user.id },
       });
 
@@ -77,6 +83,18 @@ export async function POST(req: Request) {
               city: pref.city,
               state: pref.state,
               maxRadius: pref.maxRadius || 50,
+            })
+          ),
+        });
+      }
+
+      // Save genre preferences
+      if (genrePreferences && genrePreferences.length > 0) {
+        await tx.userGenrePreference.createMany({
+          data: genrePreferences.map(
+            (pref: { genre: string }) => ({
+              userId: session.user.id,
+              genre: pref.genre,
             })
           ),
         });

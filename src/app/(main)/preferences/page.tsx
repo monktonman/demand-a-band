@@ -17,11 +17,13 @@ import {
   Plus,
   Check,
   ArrowLeft,
+  Sliders,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GENRES, DEFAULT_TICKET_PRICE } from "@/lib/constants";
 import { BandSelectionCard } from "@/components/onboarding/band-selection-card";
 import { GenreChips } from "@/components/onboarding/genre-chips";
+import { GenrePreferenceSelector } from "@/components/onboarding/genre-preference-selector";
 import Link from "next/link";
 
 // ── Types ───────────────────────────────────────────────────────
@@ -67,6 +69,7 @@ function PreferencesContent() {
 
   // Data state
   const [selectedBands, setSelectedBands] = useState<SelectedBand[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [cityPreferences, setCityPreferences] = useState<CityPreference[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -122,6 +125,12 @@ function PreferencesContent() {
           })
         );
         setSelectedBands(bands);
+
+        // Map genre preferences
+        const genres: string[] = (data.genrePreferences || []).map(
+          (pref: { genre: string }) => pref.genre
+        );
+        setSelectedGenres(genres);
 
         // Map city preferences
         const cities: CityPreference[] = (data.cityPreferences || []).map(
@@ -409,6 +418,7 @@ function PreferencesContent() {
             priority: i + 1,
             isDreamShow: false,
           })),
+          genrePreferences: selectedGenres.map((genre) => ({ genre })),
           cityPreferences,
         }),
       });
@@ -538,6 +548,27 @@ function PreferencesContent() {
       )}
 
       <div className="space-y-8">
+        {/* ═══ SECTION 0: GENRES ═══ */}
+        <section>
+          <div className="mb-4 flex items-center gap-2">
+            <Sliders className="h-5 w-5 text-orange-600" />
+            <h2 className="text-lg font-semibold">Your Genres</h2>
+            {selectedGenres.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {selectedGenres.length}
+              </Badge>
+            )}
+          </div>
+          <GenrePreferenceSelector
+            selectedGenres={selectedGenres}
+            onToggle={(genre) =>
+              setSelectedGenres((prev) =>
+                prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
+              )
+            }
+          />
+        </section>
+
         {/* ═══ SECTION 1: BANDS ═══ */}
         <section>
           <div className="mb-4 flex items-center justify-between">
@@ -849,6 +880,7 @@ function PreferencesContent() {
         <div className="sticky bottom-4 flex justify-end rounded-xl border border-zinc-200 bg-white/90 p-4 shadow-lg backdrop-blur-sm">
           <div className="flex items-center gap-4">
             <p className="text-sm text-zinc-500">
+              {selectedGenres.length > 0 && `${selectedGenres.length} genre${selectedGenres.length !== 1 ? "s" : ""}, `}
               {selectedBands.length} band{selectedBands.length !== 1 ? "s" : ""},
               {" "}
               {cityPreferences.length} location
