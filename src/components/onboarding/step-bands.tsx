@@ -27,7 +27,7 @@ interface BandResult {
   popularity: number;
 }
 
-type TabId = "popular" | "genres" | "search";
+type TabId = "popular" | "genres" | "search" | "spotify";
 
 export function StepBands({
   selectedBands,
@@ -55,8 +55,13 @@ export function StepBands({
   const [searchResults, setSearchResults] = useState<BandResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Spotify tab state
+  const [spotifyBands, setSpotifyBands] = useState<BandResult[]>([]);
+  const [isLoadingSpotify, setIsLoadingSpotify] = useState(false);
+  const [spotifyLoaded, setSpotifyLoaded] = useState(false);
+
   // Show Spotify button only if env var is set
-  const showSpotify = typeof window !== "undefined" && process.env.NEXT_PUBLIC_SPOTIFY_CONFIGURED === "true";
+  const showSpotify = process.env.NEXT_PUBLIC_SPOTIFY_CONFIGURED === "true";
 
   // Load popular bands
   useEffect(() => {
@@ -116,6 +121,30 @@ export function StepBands({
     loadGenre();
   }, [activeGenre]);
 
+  // Load user's Spotify artists when tab is selected
+  useEffect(() => {
+    if (activeTab !== "spotify" || spotifyLoaded) return;
+
+    async function loadSpotifyBands() {
+      setIsLoadingSpotify(true);
+      try {
+        const res = await fetch("/api/spotify/my-artists");
+        if (!res.ok) {
+          setSpotifyBands([]);
+          return;
+        }
+        const data = await res.json();
+        setSpotifyBands(data.bands || []);
+      } catch (error) {
+        console.error("Failed to load Spotify artists:", error);
+      } finally {
+        setIsLoadingSpotify(false);
+        setSpotifyLoaded(true);
+      }
+    }
+    loadSpotifyBands();
+  }, [activeTab, spotifyLoaded]);
+
   // Debounced search
   const searchBands = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -156,8 +185,6 @@ export function StepBands({
           name: band.name,
           genres: band.genres,
           imageUrl: band.imageUrl,
-          maxTicketPrice: 50,
-          isDreamShow: false,
         },
       ]);
     }
@@ -176,6 +203,8 @@ export function StepBands({
         return genreBands;
       case "search":
         return searchResults;
+      case "spotify":
+        return spotifyBands;
       default:
         return [];
     }
@@ -184,14 +213,16 @@ export function StepBands({
   const isLoading =
     (activeTab === "popular" && isLoadingPopular) ||
     (activeTab === "genres" && isLoadingGenre) ||
-    (activeTab === "search" && isSearching);
+    (activeTab === "search" && isSearching) ||
+    (activeTab === "spotify" && isLoadingSpotify);
 
   const displayBands = getDisplayBands();
 
-  const tabs: { id: TabId; label: string }[] = [
+  const tabs: { id: TabId; label: string; icon?: string }[] = [
     { id: "popular", label: "Popular" },
     { id: "genres", label: "By Genre" },
     { id: "search", label: "Search" },
+    ...(showSpotify ? [{ id: "spotify" as TabId, label: "My Spotify" }] : []),
   ];
 
   return (
@@ -331,6 +362,22 @@ export function StepBands({
               <p>Type at least 2 characters to search</p>
             ) : activeTab === "genres" && !activeGenre ? (
               <p>Select a genre above to browse bands</p>
+            ) : activeTab === "spotify" && !spotifyLoaded ? (
+              <p>Loading your Spotify artists...</p>
+            ) : activeTab === "spotify" && spotifyLoaded ? (
+              <div className="text-center">
+                <p className="mb-2">No Spotify artists found</p>
+                {!spotifyImported && onSpotifyConnect && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onSpotifyConnect}
+                    className="gap-2 border-green-200 text-green-700 hover:bg-green-50"
+                  >
+                    Connect Spotify to import your artists
+                  </Button>
+                )}
+              </div>
             ) : (
               <p>No bands found</p>
             )}
