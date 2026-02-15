@@ -161,7 +161,7 @@ function PreferencesContent() {
     if (!spotifyStatus) return;
 
     if (spotifyStatus === "success") {
-      const matchedCount = searchParams.get("matched") || "0";
+      const unmatchedCount = searchParams.get("unmatched") || "0";
 
       fetch("/api/spotify/matches")
         .then((res) => res.json())
@@ -191,12 +191,23 @@ function PreferencesContent() {
             });
             setSpotifyImported(true);
             setSpotifyMessage(
-              `Added ${matchedCount} new bands from your Spotify listening history!`
+              `Added ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
+            );
+          } else {
+            // Spotify connected but no bands matched our catalog
+            setSpotifyImported(true);
+            setSpotifyMessage(
+              parseInt(unmatchedCount) > 0
+                ? `Spotify connected! We found ${unmatchedCount} of your top artists but none are in our catalog yet. As we add more bands, we'll notify you of matches. You can still add bands manually below.`
+                : `Spotify connected but we couldn't find any top artists in your account. Try listening to more music and import again later!`
             );
           }
         })
         .catch((err) => {
           console.error("Failed to fetch Spotify matches:", err);
+          setSpotifyMessage(
+            "Spotify connected but we had trouble loading your matches. Try refreshing the page."
+          );
         });
     } else if (spotifyStatus === "denied") {
       setSpotifyMessage(

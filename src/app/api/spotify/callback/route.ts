@@ -85,10 +85,12 @@ export async function GET(req: NextRequest) {
 
     // Fetch top artists
     const topArtists = await fetchTopArtists(tokens.access_token);
+    console.log(`[Spotify] Fetched ${topArtists.length} top artists for user ${spotifyUserId}`);
 
     // Match against band catalog
     const { matched, unmatchedCount } =
       await matchArtistsToCatalog(topArtists);
+    console.log(`[Spotify] Matched ${matched.length} bands, ${unmatchedCount} unmatched. Matched: ${matched.map(b => b.name).join(', ') || 'none'}`);
 
     // Store matched band IDs in a cookie for the return page
     const matchedIds = matched.map((b) => b.id);
