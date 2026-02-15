@@ -26,7 +26,7 @@ export interface CityPreference {
 }
 
 const STEPS = [
-  { title: "Pick Your Bands", description: "Who do you want to see live?" },
+  { title: "Pick Your Bands & Genres", description: "What music do you want to see live?" },
   {
     title: "Your Location",
     description: "Where do you want to see shows?",

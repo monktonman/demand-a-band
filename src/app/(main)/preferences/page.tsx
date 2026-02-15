@@ -498,7 +498,7 @@ function PreferencesContent() {
             <div>
               <h1 className="text-2xl font-bold">Your Preferences</h1>
               <p className="text-sm text-zinc-500">
-                Manage your bands, locations, and pricing
+                Manage your bands, genres, and locations
               </p>
             </div>
           </div>
