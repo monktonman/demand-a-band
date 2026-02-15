@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { LayoutGrid, Calendar, Ticket, Globe } from "lucide-react";
+import { useState, useMemo } from "react";
+import { LayoutGrid, Calendar, Ticket, Globe, Sparkles, Filter, X } from "lucide-react";
 import { EventCard } from "@/components/events/event-card";
 import { ExternalEventCard, type ExternalEventData } from "@/components/events/external-event-card";
 import { EventsCalendar } from "@/components/events/events-calendar";
@@ -29,17 +29,73 @@ interface SerializedEvent {
 
 interface EventsViewProps {
   events: SerializedEvent[];
-  externalEvents?: ExternalEventData[];
+  externalEvents?: (ExternalEventData & { matchesPreferences?: boolean })[];
+  allGenres?: string[];
+  hasPreferences?: boolean;
+  userGenres?: string[];
 }
 
-export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
+export function EventsView({
+  events,
+  externalEvents = [],
+  allGenres = [],
+  hasPreferences = false,
+  userGenres = [],
+}: EventsViewProps) {
   const [view, setView] = useState<ViewMode>("cards");
   const [source, setSource] = useState<SourceTab>(
     externalEvents.length > 0 ? "all" : "dab"
   );
+  const [showMatchesOnly, setShowMatchesOnly] = useState(false);
+  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
+  const [showGenreFilter, setShowGenreFilter] = useState(false);
 
   const hasExternalEvents = externalEvents.length > 0;
   const hasDabEvents = events.length > 0;
+
+  // Filter external events based on active filters
+  const filteredExternalEvents = useMemo(() => {
+    let filtered = externalEvents;
+
+    // Filter by "My Matches"
+    if (showMatchesOnly) {
+      filtered = filtered.filter((e) => e.matchesPreferences);
+    }
+
+    // Filter by selected genres
+    if (selectedGenres.size > 0) {
+      filtered = filtered.filter((e) =>
+        e.genres.some((g) => selectedGenres.has(g))
+      );
+    }
+
+    // Sort: matches first, then by date
+    return filtered.sort((a, b) => {
+      if (a.matchesPreferences && !b.matchesPreferences) return -1;
+      if (!a.matchesPreferences && b.matchesPreferences) return 1;
+      return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
+    });
+  }, [externalEvents, showMatchesOnly, selectedGenres]);
+
+  const matchCount = externalEvents.filter((e) => e.matchesPreferences).length;
+  const isFiltering = showMatchesOnly || selectedGenres.size > 0;
+
+  const toggleGenre = (genre: string) => {
+    setSelectedGenres((prev) => {
+      const next = new Set(prev);
+      if (next.has(genre)) {
+        next.delete(genre);
+      } else {
+        next.add(genre);
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setShowMatchesOnly(false);
+    setSelectedGenres(new Set());
+  };
 
   // Convert serialized dates back for EventCard
   const hydratedEvents = events.map((e) => ({
@@ -63,8 +119,8 @@ export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
     _count: e._count,
   }));
 
-  // External events for calendar
-  const calendarExternalEvents = externalEvents.map((e) => ({
+  // External events for calendar (use filtered list)
+  const calendarExternalEvents = filteredExternalEvents.map((e) => ({
     id: e.id,
     artistName: e.artistName,
     venueName: e.venueName,
@@ -79,10 +135,14 @@ export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
   const showDabCards = source === "all" || source === "dab";
   const showExternalCards = source === "all" || source === "external";
 
+  // Compute display counts for source tabs (respects filters)
+  const filteredExternalCount = filteredExternalEvents.length;
+  const displayTotalCount = events.length + filteredExternalCount;
+
   return (
     <div>
       {/* Controls bar */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Source tabs (only show if we have external events) */}
         {hasExternalEvents && (
           <div className="flex items-center gap-1 rounded-lg border bg-zinc-50 p-1">
@@ -96,7 +156,7 @@ export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
             >
               All
               <span className="text-xs text-zinc-400">
-                ({events.length + externalEvents.length})
+                ({displayTotalCount})
               </span>
             </button>
             <button
@@ -124,7 +184,7 @@ export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
               <Globe className="h-3.5 w-3.5" />
               Baltimore
               <span className="text-xs text-zinc-400">
-                ({externalEvents.length})
+                ({filteredExternalCount})
               </span>
             </button>
           </div>
@@ -157,6 +217,81 @@ export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
         </div>
       </div>
 
+      {/* Filter bar (show when viewing external events) */}
+      {hasExternalEvents && showExternalCards && (
+        <div className="mb-6 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* My Matches toggle (only show if user has preferences) */}
+            {hasPreferences && matchCount > 0 && (
+              <button
+                onClick={() => setShowMatchesOnly(!showMatchesOnly)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                  showMatchesOnly
+                    ? "bg-amber-100 text-amber-800 border border-amber-300 shadow-sm"
+                    : "bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200"
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                My Matches
+                <span className={`text-xs ${showMatchesOnly ? "text-amber-600" : "text-zinc-400"}`}>
+                  ({matchCount})
+                </span>
+              </button>
+            )}
+
+            {/* Genre filter toggle */}
+            {allGenres.length > 0 && (
+              <button
+                onClick={() => setShowGenreFilter(!showGenreFilter)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                  selectedGenres.size > 0
+                    ? "bg-blue-100 text-blue-800 border border-blue-300 shadow-sm"
+                    : "bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                }`}
+              >
+                <Filter className="h-3.5 w-3.5" />
+                Genre
+                {selectedGenres.size > 0 && (
+                  <span className="text-xs text-blue-600">
+                    ({selectedGenres.size})
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* Clear filters */}
+            {isFiltering && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm text-zinc-500 hover:text-zinc-700 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear filters
+              </button>
+            )}
+          </div>
+
+          {/* Genre chips (expandable) */}
+          {showGenreFilter && allGenres.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 rounded-lg border bg-zinc-50/50 p-3">
+              {allGenres.map((genre) => (
+                <button
+                  key={genre}
+                  onClick={() => toggleGenre(genre)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                    selectedGenres.has(genre)
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-white text-zinc-600 border border-zinc-200 hover:border-blue-300 hover:text-blue-700"
+                  }`}
+                >
+                  {genre}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Content */}
       {view === "cards" ? (
         <div className="space-y-8">
@@ -178,17 +313,26 @@ export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
           )}
 
           {/* External Events */}
-          {showExternalCards && hasExternalEvents && (
+          {showExternalCards && filteredExternalEvents.length > 0 && (
             <div>
               {source === "all" && (
                 <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-zinc-700">
                   <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
                   Happening in Baltimore
+                  {isFiltering && (
+                    <span className="text-xs font-normal text-zinc-400">
+                      (showing {filteredExternalEvents.length} of {externalEvents.length})
+                    </span>
+                  )}
                 </h3>
               )}
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {externalEvents.map((event) => (
-                  <ExternalEventCard key={event.id} event={event} />
+                {filteredExternalEvents.map((event) => (
+                  <ExternalEventCard
+                    key={event.id}
+                    event={event}
+                    matchesPreferences={event.matchesPreferences}
+                  />
                 ))}
               </div>
             </div>
@@ -200,9 +344,24 @@ export function EventsView({ events, externalEvents = [] }: EventsViewProps) {
               <p>No DAB shows yet. Set your music preferences to help propose shows!</p>
             </div>
           )}
-          {showExternalCards && !hasExternalEvents && source === "external" && (
+          {showExternalCards && filteredExternalEvents.length === 0 && (
             <div className="py-12 text-center text-zinc-500">
-              <p>No upcoming concerts found. Check back soon!</p>
+              {isFiltering ? (
+                <div>
+                  <p className="font-medium text-zinc-600">No concerts match your filters</p>
+                  <p className="mt-1 text-sm">
+                    Try removing some filters or{" "}
+                    <button
+                      onClick={clearFilters}
+                      className="text-blue-600 hover:underline"
+                    >
+                      clear all filters
+                    </button>
+                  </p>
+                </div>
+              ) : (
+                <p>No upcoming concerts found. Check back soon!</p>
+              )}
             </div>
           )}
         </div>

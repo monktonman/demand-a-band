@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { EventsView } from "@/components/events/events-view";
 import { Music } from "lucide-react";
 
@@ -8,8 +10,9 @@ export const dynamic = "force-dynamic";
 const CACHE_MAX_AGE_HOURS = 6;
 
 export default async function EventsPage() {
-  // Fetch DAB events and external events in parallel
-  const [events, externalEvents, cacheInfo] = await Promise.all([
+  // Fetch session + DAB events + external events in parallel
+  const [session, events, externalEvents, cacheInfo] = await Promise.all([
+    getServerSession(authOptions),
     prisma.event.findMany({
       where: {
         status: { in: ["PROPOSED", "THRESHOLD_MET", "CONFIRMED"] },
@@ -33,6 +36,24 @@ export default async function EventsPage() {
       select: { fetchedAt: true },
     }),
   ]);
+
+  // Fetch user preferences if logged in
+  const userId = session?.user?.id;
+  const [genrePrefs, bandPrefs] = userId
+    ? await Promise.all([
+        prisma.userGenrePreference.findMany({
+          where: { userId },
+          select: { genre: true },
+        }),
+        prisma.userBandPreference.findMany({
+          where: { userId },
+          include: { band: { select: { name: true } } },
+        }),
+      ])
+    : [[], []];
+
+  const userGenres = genrePrefs.map((g) => g.genre.toLowerCase());
+  const userBandNames = bandPrefs.map((b) => b.band.name.toLowerCase());
 
   // Trigger background cache refresh if stale
   const cacheAge = cacheInfo
@@ -67,26 +88,45 @@ export default async function EventsPage() {
     showTime: e.showTime?.toISOString() ?? null,
   }));
 
-  // Serialize external events
-  const serializedExternalEvents = externalEvents.map((e) => ({
-    id: e.id,
-    externalId: e.externalId,
-    name: e.name,
-    artistName: e.artistName,
-    genres: e.genres,
-    venueName: e.venueName,
-    venueCity: e.venueCity,
-    venueState: e.venueState,
-    eventDate: e.eventDate.toISOString(),
-    eventTime: e.eventTime,
-    imageUrl: e.imageUrl,
-    ticketUrl: e.ticketUrl,
-    priceMin: e.priceMin?.toString() ?? null,
-    priceMax: e.priceMax?.toString() ?? null,
-    source: e.source,
-  }));
+  // Serialize external events with match computation
+  const serializedExternalEvents = externalEvents.map((e) => {
+    // Check if event matches user preferences (genre or artist name)
+    const eventGenresLower = e.genres.map((g) => g.toLowerCase());
+    const artistLower = e.artistName.toLowerCase();
+    const genreMatch = userGenres.some((ug) =>
+      eventGenresLower.some((eg) => eg.includes(ug) || ug.includes(eg))
+    );
+    const bandMatch = userBandNames.some(
+      (bn) => artistLower.includes(bn) || bn.includes(artistLower)
+    );
+
+    return {
+      id: e.id,
+      externalId: e.externalId,
+      name: e.name,
+      artistName: e.artistName,
+      genres: e.genres,
+      venueName: e.venueName,
+      venueCity: e.venueCity,
+      venueState: e.venueState,
+      eventDate: e.eventDate.toISOString(),
+      eventTime: e.eventTime,
+      imageUrl: e.imageUrl,
+      ticketUrl: e.ticketUrl,
+      priceMin: e.priceMin?.toString() ?? null,
+      priceMax: e.priceMax?.toString() ?? null,
+      source: e.source,
+      matchesPreferences: genreMatch || bandMatch,
+    };
+  });
+
+  // Collect all unique genres from external events for the filter
+  const allGenres = Array.from(
+    new Set(externalEvents.flatMap((e) => e.genres).filter(Boolean))
+  ).sort();
 
   const totalShows = events.length + externalEvents.length;
+  const hasPreferences = userGenres.length > 0 || userBandNames.length > 0;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -103,6 +143,9 @@ export default async function EventsPage() {
         <EventsView
           events={serializedEvents}
           externalEvents={serializedExternalEvents}
+          allGenres={allGenres}
+          hasPreferences={hasPreferences}
+          userGenres={genrePrefs.map((g) => g.genre)}
         />
       ) : (
         <div className="py-24 text-center">
