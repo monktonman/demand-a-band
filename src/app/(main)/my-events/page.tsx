@@ -25,6 +25,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { MyShowsTour } from "@/components/shared/my-shows-tour";
+import { ViewTicketsButton } from "./view-tickets-button";
 
 export const dynamic = "force-dynamic";
 
@@ -296,18 +297,7 @@ export default async function MyEventsPage() {
                                 {EVENT_STATUS_LABELS[pledge.event.status]}
                               </Badge>
                               {pledge.status === "CHARGED" && pledge.tickets.length > 0 && (
-                                <Link
-                                  href={`/my-events/tickets/${pledge.id}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Button
-                                    size="sm"
-                                    className="gap-1.5 bg-orange-600 hover:bg-orange-700 text-white h-7 text-xs"
-                                  >
-                                    <QrCode className="h-3.5 w-3.5" />
-                                    View Tickets
-                                  </Button>
-                                </Link>
+                                <ViewTicketsButton pledgeId={pledge.id} />
                               )}
                             </div>
                           </div>
