@@ -40,7 +40,7 @@ export default async function EventsPage() {
 
   // Fetch user preferences if logged in
   const userId = session?.user?.id;
-  const [genrePrefs, bandPrefs] = userId
+  const [genrePrefs, bandPrefs, cityPrefs] = userId
     ? await Promise.all([
         prisma.userGenrePreference.findMany({
           where: { userId },
@@ -50,8 +50,12 @@ export default async function EventsPage() {
           where: { userId },
           include: { band: { select: { name: true } } },
         }),
+        prisma.userCityPreference.findMany({
+          where: { userId },
+          select: { city: true, state: true },
+        }),
       ])
-    : [[], []];
+    : [[], [], []];
 
   const userGenres = genrePrefs.map((g) => g.genre.toLowerCase());
   const userBandNames = bandPrefs.map((b) => b.band.name.toLowerCase());
@@ -128,6 +132,7 @@ export default async function EventsPage() {
 
   const totalShows = events.length + externalEvents.length;
   const hasPreferences = userGenres.length > 0 || userBandNames.length > 0;
+  const userCities = cityPrefs.map((c) => `${c.city}, ${c.state}`);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -135,7 +140,7 @@ export default async function EventsPage() {
         <h1 className="text-3xl font-bold">Shows</h1>
         <p className="mt-2 text-zinc-500">
           {externalEvents.length > 0
-            ? `${totalShows} upcoming shows in the Baltimore area. Pledge for DAB shows or grab tickets to confirmed concerts.`
+            ? `${totalShows} upcoming shows${userCities.length > 0 ? ` near ${userCities[0]}` : ""}. Pledge for DAB shows or grab tickets to confirmed concerts.`
             : "Browse proposed and upcoming shows. Commit your support to make them happen."}
         </p>
       </div>
@@ -154,6 +159,7 @@ export default async function EventsPage() {
           allGenres={allGenres}
           hasPreferences={hasPreferences}
           userGenres={genrePrefs.map((g) => g.genre)}
+          userCities={userCities}
         />
       ) : (
         <div className="py-24 text-center">

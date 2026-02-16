@@ -35,6 +35,7 @@ interface EventsViewProps {
   allGenres?: string[];
   hasPreferences?: boolean;
   userGenres?: string[];
+  userCities?: string[];
 }
 
 export function EventsView({
@@ -43,6 +44,7 @@ export function EventsView({
   allGenres = [],
   hasPreferences = false,
   userGenres = [],
+  userCities = [],
 }: EventsViewProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -72,7 +74,16 @@ export function EventsView({
   const [showMatchesOnly, setShowMatchesOnly] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
   const [showGenreFilter, setShowGenreFilter] = useState(false);
-  const [selectedCity, setSelectedCity] = useState<string>("all");
+  // Default to user's preferred city if it has events available
+  const initialCity = useMemo(() => {
+    if (userCities.length === 0) return "all";
+    const eventCityKeys = new Set(
+      externalEvents.map((e) => `${e.venueCity}, ${e.venueState}`)
+    );
+    const match = userCities.find((c) => eventCityKeys.has(c));
+    return match ?? "all";
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only compute on mount
+  const [selectedCity, setSelectedCity] = useState<string>(initialCity);
   const [showCityFilter, setShowCityFilter] = useState(false);
 
   const hasExternalEvents = externalEvents.length > 0;
