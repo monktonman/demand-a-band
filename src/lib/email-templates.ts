@@ -34,7 +34,7 @@ function baseTemplate(content: string): string {
     </div>
     <div class="footer">
       <p>&copy; ${new Date().getFullYear()} Demand A Band. All rights reserved.</p>
-      <p><a href="${process.env.NEXTAUTH_URL || "https://demandaband.com"}">Visit Demand A Band</a></p>
+      <p><a href="${process.env.NEXTAUTH_URL || "https://demanda.band"}">Visit Demand A Band</a></p>
     </div>
   </div>
 </body>

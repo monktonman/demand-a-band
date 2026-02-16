@@ -282,7 +282,7 @@ export async function notifyPaymentFailed({
   await maybeSendSms(user, paymentFailedSms(bandName, venueName));
 }
 
-// Notify fans who have this band in their preferences about a new event
+// Notify fans who have this band OR matching genres in their preferences about a new event
 export async function notifyMatchingFans(eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -294,21 +294,46 @@ export async function notifyMatchingFans(eventId: string) {
 
   if (!event) return;
 
-  // Find all users who have this band in their preferences
-  const matchingPrefs = await prisma.userBandPreference.findMany({
+  const userSelect = { id: true, name: true, email: true, phone: true, smsOptIn: true };
+
+  // Find users who have this specific band in their preferences
+  const bandMatches = await prisma.userBandPreference.findMany({
     where: { bandId: event.bandId },
-    include: {
-      user: { select: { id: true, name: true, email: true, phone: true, smsOptIn: true } },
-    },
+    include: { user: { select: userSelect } },
   });
 
-  if (matchingPrefs.length === 0) return;
+  // Find users whose genre preferences overlap with this band's genres
+  const bandGenres = event.band.genres || [];
+  let genreMatches: { user: { id: string; name: string | null; email: string; phone: string | null; smsOptIn: boolean } }[] = [];
+
+  if (bandGenres.length > 0) {
+    genreMatches = await prisma.userGenrePreference.findMany({
+      where: { genre: { in: bandGenres } },
+      include: { user: { select: userSelect } },
+    });
+  }
+
+  // Deduplicate users — band match users shouldn't also get a genre match notification
+  const bandMatchUserIds = new Set(bandMatches.map((m) => m.user.id));
+  const uniqueGenreUsers = genreMatches.filter(
+    (m) => !bandMatchUserIds.has(m.user.id)
+  );
+  // Also deduplicate genre matches (a user may match multiple genres)
+  const seenGenreUserIds = new Set<string>();
+  const dedupedGenreUsers = uniqueGenreUsers.filter((m) => {
+    if (seenGenreUserIds.has(m.user.id)) return false;
+    seenGenreUserIds.add(m.user.id);
+    return true;
+  });
+
+  const totalNotified = bandMatches.length + dedupedGenreUsers.length;
+  if (totalNotified === 0) return;
 
   const ticketPrice = formatCurrency(Number(event.ticketPrice));
   const eventDate = formatDate(event.eventDate);
 
-  for (const pref of matchingPrefs) {
-    // In-app notification
+  // Notify band-preference matches (stronger match — "one of your favorites")
+  for (const pref of bandMatches) {
     await createNotification({
       userId: pref.user.id,
       type: "EVENT_CREATED",
@@ -317,7 +342,6 @@ export async function notifyMatchingFans(eventId: string) {
       eventId,
     });
 
-    // Email
     if (pref.user.email) {
       const email = newEventMatchEmail(
         pref.user.name || "Fan",
@@ -331,12 +355,41 @@ export async function notifyMatchingFans(eventId: string) {
       await sendEmail({ to: pref.user.email, ...email });
     }
 
-    // SMS
     await maybeSendSms(
       pref.user,
       newEventMatchSms(event.band.name, event.venue.name, eventDate, ticketPrice, event.slug)
     );
   }
 
-  console.log(`[Notify] Sent new event notifications to ${matchingPrefs.length} fans for ${event.band.name}`);
+  // Notify genre-preference matches (discovery — "based on your genres")
+  for (const match of dedupedGenreUsers) {
+    const matchingGenres = bandGenres.join(", ");
+    await createNotification({
+      userId: match.user.id,
+      type: "EVENT_CREATED",
+      title: `New ${matchingGenres} show near you! 🎶`,
+      message: `${event.band.name} at ${event.venue.name} on ${eventDate}. Matches your genre preferences. Tickets from ${ticketPrice}.`,
+      eventId,
+    });
+
+    if (match.user.email) {
+      const email = newEventMatchEmail(
+        match.user.name || "Fan",
+        event.band.name,
+        event.venue.name,
+        `${event.venue.city}, ${event.venue.state}`,
+        eventDate,
+        ticketPrice,
+        event.slug
+      );
+      await sendEmail({ to: match.user.email, ...email });
+    }
+
+    await maybeSendSms(
+      match.user,
+      newEventMatchSms(event.band.name, event.venue.name, eventDate, ticketPrice, event.slug)
+    );
+  }
+
+  console.log(`[Notify] Sent new event notifications to ${totalNotified} fans (${bandMatches.length} band + ${dedupedGenreUsers.length} genre) for ${event.band.name}`);
 }
