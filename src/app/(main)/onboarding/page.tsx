@@ -181,11 +181,13 @@ function OnboardingContent() {
         throw new Error("Failed to save preferences");
       }
 
-      // Update session to mark as onboarded and wait for it to propagate
-      await updateSession({ onboarded: true });
+      // Update session to mark as onboarded
+      const updatedSession = await updateSession({ onboarded: true });
 
-      // Small delay to ensure the session token is updated before the user navigates
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Retry once if session update didn't take effect
+      if (!updatedSession?.user?.onboarded) {
+        await updateSession({ onboarded: true });
+      }
 
       // Move to completion step
       handleNext();

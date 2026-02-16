@@ -47,10 +47,20 @@ export default async function EventDetailPage({
     notFound();
   }
 
+  // Get actual ticket count (sum of quantities, not row count)
+  const ticketAggregate = await prisma.pledge.aggregate({
+    where: {
+      eventId: event.id,
+      status: { in: ["ACTIVE", "CHARGED"] },
+    },
+    _sum: { quantity: true },
+  });
+  const totalTicketCount = ticketAggregate._sum.quantity || 0;
+
   const ticketPrice = Number(event.ticketPrice);
   const serviceFee = Number(event.serviceFee);
   const totalPrice = ticketPrice + serviceFee;
-  const pledgeCount = event._count.pledges;
+  const pledgeCount = totalTicketCount;
   const progress = Math.min(
     (pledgeCount / event.minPledges) * 100,
     100
@@ -255,6 +265,7 @@ export default async function EventDetailPage({
                   currentPledges={pledgeCount}
                   isAcceptingPledges={isAcceptingPledges}
                   userHasPledged={userHasPledged}
+                  pledgeDeadline={event.pledgeDeadline.toISOString()}
                 />
                 <p className="text-center text-xs text-zinc-400">
                   You&apos;ll only be charged if the show is confirmed.

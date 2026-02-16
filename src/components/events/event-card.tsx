@@ -28,12 +28,13 @@ interface EventCardProps {
     maxCapacity: number;
     band: Band;
     venue: Venue;
+    ticketCount?: number;
     _count: { pledges: number };
   };
 }
 
 export function EventCard({ event }: EventCardProps) {
-  const pledgeCount = event._count.pledges;
+  const pledgeCount = event.ticketCount ?? event._count.pledges;
   const progress = Math.min(
     (pledgeCount / event.minPledges) * 100,
     100

@@ -27,6 +27,17 @@ export async function GET(
     include: {
       band: { select: { id: true, name: true, genres: true } },
       venue: { select: { id: true, name: true, city: true, state: true, capacity: true } },
+      pledges: {
+        select: {
+          id: true,
+          quantity: true,
+          totalAmount: true,
+          status: true,
+          chargedAt: true,
+          user: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
       _count: { select: { pledges: true } },
     },
   });
@@ -35,7 +46,12 @@ export async function GET(
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ event });
+  // Compute actual ticket count from quantities
+  const ticketCount = event.pledges
+    .filter((p) => p.status === "ACTIVE" || p.status === "CHARGED")
+    .reduce((sum, p) => sum + p.quantity, 0);
+
+  return NextResponse.json({ event: { ...event, ticketCount } });
 }
 
 // PUT: Update event fields (admin or operator, only PROPOSED or THRESHOLD_MET)
@@ -189,7 +205,27 @@ export async function PATCH(
         }
       }
 
-      // Update event status
+      const succeeded = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success).length;
+
+      // Only confirm if at least one payment succeeded (or no pledges to charge)
+      if (succeeded === 0 && event.pledges.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "All payment charges failed. Event was not confirmed.",
+            payments: {
+              total: results.length,
+              succeeded,
+              failed,
+              details: results,
+            },
+          },
+          { status: 422 }
+        );
+      }
+
+      // At least one payment succeeded — confirm the event
       await prisma.event.update({
         where: { id },
         data: {
@@ -197,9 +233,6 @@ export async function PATCH(
           confirmedAt: new Date(),
         },
       });
-
-      const succeeded = results.filter((r) => r.success).length;
-      const failed = results.filter((r) => !r.success).length;
 
       // Send notifications to all pledgers
       notifyEventConfirmed(id).catch(console.error);

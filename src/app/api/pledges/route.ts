@@ -47,7 +47,6 @@ export async function POST(req: Request) {
     // Get the event
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { _count: { select: { pledges: true } } },
     });
 
     if (!event) {
@@ -90,8 +89,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check capacity
-    if (event._count.pledges + quantity > event.maxCapacity) {
+    // Get actual ticket count (sum of quantities, not row count)
+    const ticketAggregate = await prisma.pledge.aggregate({
+      where: {
+        eventId,
+        status: { in: ["ACTIVE", "CHARGED"] },
+      },
+      _sum: { quantity: true },
+    });
+    const currentTicketCount = ticketAggregate._sum.quantity || 0;
+
+    // Check capacity using ticket quantities
+    if (currentTicketCount + quantity > event.maxCapacity) {
       return NextResponse.json(
         { error: "Not enough capacity remaining" },
         { status: 400 }
@@ -130,9 +139,9 @@ export async function POST(req: Request) {
       quantity,
     }).catch(console.error);
 
-    // Check if threshold is now met
-    const totalPledges = event._count.pledges + quantity;
-    if (totalPledges >= event.minPledges && event.status === "PROPOSED") {
+    // Check if threshold is now met (using ticket quantities)
+    const totalTickets = currentTicketCount + quantity;
+    if (totalTickets >= event.minPledges && event.status === "PROPOSED") {
       await prisma.event.update({
         where: { id: eventId },
         data: { status: "THRESHOLD_MET" },

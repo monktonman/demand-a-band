@@ -25,6 +25,7 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
+  Heart,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -135,6 +136,7 @@ function DreamShowContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareCode, setShareCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [voteCount, setVoteCount] = useState<number | null>(null);
   const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
   const [estimateLoading, setEstimateLoading] = useState(false);
   const [customPrice, setCustomPrice] = useState("");
@@ -264,6 +266,11 @@ function DreamShowContent() {
       if (res.ok && data.shareCode) {
         setShareCode(data.shareCode);
         setSubmitted(true);
+        // Fetch vote count for the newly created dream show
+        fetch(`/api/dream-shows/${data.shareCode}`)
+          .then((r) => r.ok ? r.json() : null)
+          .then((d) => { if (d?.dreamShow?.voteCount != null) setVoteCount(d.dreamShow.voteCount); })
+          .catch(() => {});
       } else {
         setSubmitted(true);
       }
@@ -301,6 +308,12 @@ function DreamShowContent() {
             <PartyPopper className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold">Dream Show Created!</h1>
+          {voteCount != null && voteCount > 0 && (
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1 text-sm font-medium text-pink-700">
+              <Heart className="h-3.5 w-3.5" />
+              {voteCount} {voteCount === 1 ? "fan" : "fans"} already opted in
+            </div>
+          )}
           <p className="mt-4 text-lg text-zinc-600">
             <strong>{selectedBand?.name}</strong> in a{" "}
             <strong>{venueInfo?.capacity}-person {venueInfo?.label.toLowerCase()} venue</strong>
@@ -383,6 +396,7 @@ function DreamShowContent() {
               setSelectedPrice(null);
               setSelectedPriceLabel("");
               setShareCode("");
+              setVoteCount(null);
               setPriceEstimate(null);
               setCustomPrice("");
               setStep(1);

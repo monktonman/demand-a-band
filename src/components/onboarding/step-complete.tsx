@@ -34,35 +34,43 @@ export function StepComplete({
         </p>
       </div>
 
-      {/* Stats */}
-      <div className="mx-auto flex max-w-md flex-wrap justify-center gap-4">
-        <div className="flex flex-col items-center gap-1 rounded-lg bg-orange-50 px-5 py-4">
-          <Music className="h-6 w-6 text-orange-600" />
-          <span className="text-2xl font-bold text-zinc-900">{bandCount}</span>
-          <span className="text-sm text-zinc-500">Artists</span>
-        </div>
-
+      {/* Saved preferences checklist */}
+      <div className="mx-auto max-w-sm space-y-3">
         {genreCount > 0 && (
-          <div className="flex flex-col items-center gap-1 rounded-lg bg-purple-50 px-5 py-4">
-            <Sliders className="h-6 w-6 text-purple-600" />
-            <span className="text-2xl font-bold text-zinc-900">{genreCount}</span>
-            <span className="text-sm text-zinc-500">Genres</span>
+          <div className="flex items-center gap-3 rounded-lg bg-purple-50 px-4 py-3">
+            <CheckCircle className="h-5 w-5 text-purple-600 shrink-0" />
+            <span className="text-sm font-medium text-zinc-800">
+              {genreCount} genre{genreCount !== 1 ? "s" : ""} selected
+            </span>
           </div>
         )}
-
-        <div className="flex flex-col items-center gap-1 rounded-lg bg-blue-50 px-5 py-4">
-          <MapPin className="h-6 w-6 text-blue-600" />
-          <span className="text-2xl font-bold text-zinc-900">{cityCount}</span>
-          <span className="text-sm text-zinc-500">{cityCount === 1 ? "City" : "Cities"}</span>
-        </div>
-
-        {dreamShowCount > 0 && (
-          <div className="flex flex-col items-center gap-1 rounded-lg bg-amber-50 px-5 py-4">
-            <Sparkles className="h-6 w-6 text-amber-600" />
-            <span className="text-2xl font-bold text-amber-700">
-              {dreamShowCount}
+        {bandCount > 0 ? (
+          <div className="flex items-center gap-3 rounded-lg bg-orange-50 px-4 py-3">
+            <CheckCircle className="h-5 w-5 text-orange-600 shrink-0" />
+            <span className="text-sm font-medium text-zinc-800">
+              {bandCount} artist{bandCount !== 1 ? "s" : ""} following
             </span>
-            <span className="text-sm text-amber-600">Dream shows</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-lg bg-zinc-50 px-4 py-3">
+            <Music className="h-5 w-5 text-zinc-400 shrink-0" />
+            <span className="text-sm text-zinc-500">
+              No artists yet &mdash; you can add them later from My Shows
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3">
+          <CheckCircle className="h-5 w-5 text-blue-600 shrink-0" />
+          <span className="text-sm font-medium text-zinc-800">
+            {cityCount} {cityCount === 1 ? "city" : "cities"} added
+          </span>
+        </div>
+        {dreamShowCount > 0 && (
+          <div className="flex items-center gap-3 rounded-lg bg-amber-50 px-4 py-3">
+            <CheckCircle className="h-5 w-5 text-amber-600 shrink-0" />
+            <span className="text-sm font-medium text-zinc-800">
+              {dreamShowCount} dream show{dreamShowCount !== 1 ? "s" : ""} created
+            </span>
           </div>
         )}
       </div>

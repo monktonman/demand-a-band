@@ -22,7 +22,22 @@ export async function GET(req: Request) {
     orderBy: { eventDate: "asc" },
   });
 
-  return NextResponse.json({ events });
+  // Compute actual ticket counts (sum of quantities, not row count)
+  const ticketSums = await prisma.pledge.groupBy({
+    by: ["eventId"],
+    where: { status: { in: ["ACTIVE", "CHARGED"] } },
+    _sum: { quantity: true },
+  });
+  const ticketMap = Object.fromEntries(
+    ticketSums.map((e) => [e.eventId, e._sum.quantity || 0])
+  );
+
+  const enrichedEvents = events.map((e) => ({
+    ...e,
+    ticketCount: ticketMap[e.id] || 0,
+  }));
+
+  return NextResponse.json({ events: enrichedEvents });
 }
 
 // POST: Create event (admin or operator)

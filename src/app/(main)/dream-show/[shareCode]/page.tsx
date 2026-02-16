@@ -272,14 +272,82 @@ export default function DreamShowSharePage({
       <Card className="mt-6 border-2 border-orange-200">
         <CardContent className="p-6">
           {hasVoted ? (
-            <div className="text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-                <Check className="h-6 w-6 text-green-600" />
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                  <Check className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="text-lg font-bold">You&apos;re opted in!</h3>
+                <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-1.5">
+                  <Users className="h-4 w-4 text-orange-600" />
+                  <span className="font-bold text-orange-700">
+                    {dreamShow.voteCount}
+                  </span>
+                  <span className="text-sm text-orange-600">
+                    {dreamShow.voteCount === 1 ? "fan" : "fans"} want this
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Share with more friends to build demand!
+                </p>
               </div>
-              <h3 className="text-lg font-bold">You&apos;re opted in!</h3>
-              <p className="mt-1 text-sm text-zinc-500">
-                Help build demand — share with more friends!
-              </p>
+              {/* Inline share buttons for voted users */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <Button
+                  variant="outline"
+                  onClick={copyLink}
+                  className="h-auto flex-col gap-1.5 py-3"
+                >
+                  {copied ? (
+                    <Check className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <Copy className="h-5 w-5 text-zinc-500" />
+                  )}
+                  <span className="text-xs">
+                    {copied ? "Copied!" : "Copy Link"}
+                  </span>
+                </Button>
+                <Button
+                  variant="outline"
+                  asChild
+                  className="h-auto flex-col gap-1.5 py-3"
+                >
+                  <a
+                    href={`sms:&body=${encodeURIComponent(shareText + " " + shareUrl)}`}
+                  >
+                    <MessageCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-xs">Text</span>
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  asChild
+                  className="h-auto flex-col gap-1.5 py-3"
+                >
+                  <a
+                    href={`mailto:?subject=${encodeURIComponent(`Dream Show: ${dreamShow.band.name}${dreamShow.venue ? ` at ${dreamShow.venue.name}` : ""}`)}&body=${encodeURIComponent(shareText + "\n\n" + shareUrl)}`}
+                  >
+                    <Mail className="h-5 w-5 text-blue-600" />
+                    <span className="text-xs">Email</span>
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  asChild
+                  className="h-auto flex-col gap-1.5 py-3"
+                >
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg className="h-5 w-5 text-zinc-700" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    <span className="text-xs">X / Twitter</span>
+                  </a>
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">

@@ -108,6 +108,19 @@ export function BandSelectionCard({
             {genre}
           </Badge>
         ))}
+        {band.genres.length > 2 && (
+          <Badge
+            variant="outline"
+            className={cn(
+              "px-1.5 py-0 text-[10px] font-normal",
+              isSelected
+                ? "border-orange-300 text-orange-700"
+                : "border-zinc-200 text-zinc-500"
+            )}
+          >
+            +{band.genres.length - 2}
+          </Badge>
+        )}
       </div>
 
       {/* Popularity bar */}

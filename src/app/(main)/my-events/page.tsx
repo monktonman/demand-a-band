@@ -107,6 +107,22 @@ export default async function MyEventsPage() {
     .filter((p) => p.status === "ACTIVE" || p.status === "CHARGED")
     .reduce((sum, p) => sum + p.quantity, 0);
 
+  // Get actual ticket sums per event (quantities, not row counts)
+  const eventIds = [...new Set(pledges.map((p) => p.eventId))];
+  const ticketSums = eventIds.length > 0
+    ? await prisma.pledge.groupBy({
+        by: ["eventId"],
+        where: {
+          eventId: { in: eventIds },
+          status: { in: ["ACTIVE", "CHARGED"] },
+        },
+        _sum: { quantity: true },
+      })
+    : [];
+  const ticketCountMap = Object.fromEntries(
+    ticketSums.map((e) => [e.eventId, e._sum.quantity || 0])
+  );
+
   // Get recommended events based on artist preferences
   const userBandIds = await prisma.userBandPreference.findMany({
     where: { userId: session.user.id },
@@ -115,7 +131,7 @@ export default async function MyEventsPage() {
   const bandIds = userBandIds.map((b) => b.bandId);
   const pledgedEventIds = pledges.map((p) => p.eventId);
 
-  const suggestedEvents = bandIds.length > 0
+  const suggestedEventsRaw = bandIds.length > 0
     ? await prisma.event.findMany({
         where: {
           bandId: { in: bandIds },
@@ -130,6 +146,26 @@ export default async function MyEventsPage() {
         take: 3,
       })
     : [];
+
+  // Enrich suggested events with ticket counts
+  const suggestedEventIds = suggestedEventsRaw.map((e) => e.id);
+  const suggestedTicketSums = suggestedEventIds.length > 0
+    ? await prisma.pledge.groupBy({
+        by: ["eventId"],
+        where: {
+          eventId: { in: suggestedEventIds },
+          status: { in: ["ACTIVE", "CHARGED"] },
+        },
+        _sum: { quantity: true },
+      })
+    : [];
+  const suggestedTicketMap = Object.fromEntries(
+    suggestedTicketSums.map((e) => [e.eventId, e._sum.quantity || 0])
+  );
+  const suggestedEvents = suggestedEventsRaw.map((e) => ({
+    ...e,
+    ticketCount: suggestedTicketMap[e.id] || 0,
+  }));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -199,7 +235,7 @@ export default async function MyEventsPage() {
           </h2>
           <div className="space-y-4">
             {activePledges.map((pledge) => {
-              const pledgeCount = pledge.event._count.pledges;
+              const pledgeCount = ticketCountMap[pledge.eventId] ?? pledge.event._count.pledges;
               const progress = Math.min(
                 (pledgeCount / pledge.event.minPledges) * 100,
                 100
@@ -559,24 +595,60 @@ export default async function MyEventsPage() {
 
       {/* Empty state — only show if no pledges AND no dream shows */}
       {pledges.length === 0 && dreamShows.length === 0 && (
-        <div className="py-16 text-center">
-          <Ticket className="mx-auto mb-4 h-16 w-16 text-zinc-200" />
-          <h2 className="text-2xl font-bold text-zinc-700">No shows yet</h2>
-          <p className="mt-2 text-zinc-500 max-w-md mx-auto">
-            Browse proposed shows and pledge your support, or dream up the perfect show and rally your friends!
+        <div className="py-12">
+          <h2 className="text-center text-2xl font-bold text-zinc-700 mb-2">
+            Welcome to Demand A Band
+          </h2>
+          <p className="text-center text-zinc-500 mb-8 max-w-lg mx-auto">
+            Here&apos;s how to get started
           </p>
-          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link href="/events">
-              <Button className="bg-orange-600 hover:bg-orange-700" size="lg">
-                Browse Shows
-              </Button>
-            </Link>
-            <Link href="/dream-show">
-              <Button variant="outline" size="lg" className="gap-1.5">
-                <Sparkles className="h-4 w-4" />
-                Build a Dream Show
-              </Button>
-            </Link>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <Card className="text-center">
+              <CardContent className="pt-6 pb-6">
+                <Ticket className="mx-auto mb-3 h-10 w-10 text-orange-500" />
+                <h3 className="font-bold text-lg">Browse Shows</h3>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Discover proposed shows and pledge your support to make them happen
+                </p>
+                <Link href="/events">
+                  <Button className="mt-4 bg-orange-600 hover:bg-orange-700">
+                    Browse Shows
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardContent className="pt-6 pb-6">
+                <Sparkles className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+                <h3 className="font-bold text-lg">Create a Dream Show</h3>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Dream up your perfect show and rally fans to build demand
+                </p>
+                <Link href="/dream-show">
+                  <Button className="mt-4" variant="outline">
+                    Build Dream Show
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {bandPrefs.length === 0 && genrePrefs.length === 0 && (
+              <Card className="text-center">
+                <CardContent className="pt-6 pb-6">
+                  <Sliders className="mx-auto mb-3 h-10 w-10 text-purple-500" />
+                  <h3 className="font-bold text-lg">Set Preferences</h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Tell us your favorite artists and genres so we can match you
+                  </p>
+                  <Link href="/preferences">
+                    <Button className="mt-4" variant="outline">
+                      Set Preferences
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       )}

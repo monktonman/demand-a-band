@@ -28,6 +28,7 @@ interface PledgeButtonProps {
   currentPledges: number;
   isAcceptingPledges: boolean;
   userHasPledged: boolean;
+  pledgeDeadline?: string;
 }
 
 export function PledgeButton({
@@ -38,6 +39,7 @@ export function PledgeButton({
   currentPledges,
   isAcceptingPledges,
   userHasPledged,
+  pledgeDeadline,
 }: PledgeButtonProps) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -151,9 +153,20 @@ export function PledgeButton({
             <DialogHeader>
               <DialogTitle>Confirm Your Pledge</DialogTitle>
               <DialogDescription>
-                You won&apos;t be charged until the show reaches its minimum
-                pledges and is confirmed.
+                You won&apos;t be charged now. Your card is only charged when
+                the show is confirmed by our team.
               </DialogDescription>
+              {pledgeDeadline && (
+                <p className="text-xs text-zinc-500 mt-1">
+                  Pledge deadline:{" "}
+                  {new Date(pledgeDeadline).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+              )}
             </DialogHeader>
 
             {error && (

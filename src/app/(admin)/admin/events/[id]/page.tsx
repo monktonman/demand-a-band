@@ -27,6 +27,15 @@ import {
 import Link from "next/link";
 import { use } from "react";
 
+interface PledgeDetail {
+  id: string;
+  quantity: number;
+  totalAmount: string;
+  status: string;
+  chargedAt: string | null;
+  user: { id: string; name: string | null; email: string };
+}
+
 interface EventDetail {
   id: string;
   title: string;
@@ -39,8 +48,18 @@ interface EventDetail {
   pledgeDeadline: string;
   band: { name: string; genres: string[] };
   venue: { name: string; city: string; state: string; capacity: number };
+  ticketCount?: number;
+  pledges?: PledgeDetail[];
   _count: { pledges: number };
 }
+
+const PLEDGE_STATUS_COLORS: Record<string, string> = {
+  ACTIVE: "bg-blue-100 text-blue-800",
+  CHARGED: "bg-green-100 text-green-800",
+  PAYMENT_FAILED: "bg-red-100 text-red-800",
+  REFUNDED: "bg-purple-100 text-purple-800",
+  CANCELLED: "bg-zinc-100 text-zinc-800",
+};
 
 export default function AdminEventDetailPage({
   params,
@@ -58,15 +77,14 @@ export default function AdminEventDetailPage({
     message: string;
   } | null>(null);
 
+  const loadEvent = async () => {
+    const res = await fetch(`/api/admin/events/${id}`);
+    const data = await res.json();
+    setEvent(data.event || null);
+    setIsLoading(false);
+  };
+
   useEffect(() => {
-    async function loadEvent() {
-      const res = await fetch(`/api/events?id=${id}`);
-      const data = await res.json();
-      // Find the specific event from the list
-      const found = data.events?.find((e: EventDetail) => e.id === id);
-      setEvent(found || null);
-      setIsLoading(false);
-    }
     loadEvent();
   }, [id]);
 
@@ -85,7 +103,12 @@ export default function AdminEventDetailPage({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || `Failed to ${action} event`);
+        const errorMsg = data.error || `Failed to ${action} event`;
+        const paymentInfo =
+          data.payments?.failed > 0
+            ? ` (${data.payments.failed}/${data.payments.total} payments failed)`
+            : "";
+        throw new Error(errorMsg + paymentInfo);
       }
 
       if (action === "confirm" && data.payments) {
@@ -104,17 +127,14 @@ export default function AdminEventDetailPage({
       }
 
       // Refresh event data
-      const refreshRes = await fetch(`/api/events?id=${id}`);
-      const refreshData = await refreshRes.json();
-      const refreshed = refreshData.events?.find(
-        (e: EventDetail) => e.id === id
-      );
-      if (refreshed) setEvent(refreshed);
+      await loadEvent();
     } catch (err) {
       setResult({
         type: "error",
         message: err instanceof Error ? err.message : "Something went wrong",
       });
+      // Still refresh to show updated pledge statuses
+      await loadEvent();
     } finally {
       setIsConfirming(false);
       setIsCancelling(false);
@@ -144,7 +164,7 @@ export default function AdminEventDetailPage({
 
   const ticketPrice = Number(event.ticketPrice);
   const serviceFee = Number(event.serviceFee);
-  const pledgeCount = event._count.pledges;
+  const pledgeCount = event.ticketCount ?? event._count.pledges;
   const progress = Math.min((pledgeCount / event.minPledges) * 100, 100);
   const canConfirm =
     event.status === "PROPOSED" || event.status === "THRESHOLD_MET";
@@ -342,6 +362,54 @@ export default function AdminEventDetailPage({
           <AlertTriangle className="h-5 w-5" />
           This event has been cancelled. All active pledges were released.
         </div>
+      )}
+
+      {/* Pledges table */}
+      {event.pledges && event.pledges.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Ticket className="h-5 w-5 text-orange-600" />
+              Pledges ({event.pledges.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {event.pledges.map((pledge) => (
+                <div
+                  key={pledge.id}
+                  className="flex items-center justify-between rounded-lg border border-zinc-100 px-4 py-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">
+                      {pledge.user.name || pledge.user.email}
+                    </p>
+                    {pledge.user.name && (
+                      <p className="text-xs text-zinc-400 truncate">
+                        {pledge.user.email}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-zinc-500">
+                      {pledge.quantity} {pledge.quantity === 1 ? "ticket" : "tickets"}
+                    </span>
+                    <span className="font-medium">
+                      ${Number(pledge.totalAmount).toFixed(2)}
+                    </span>
+                    <Badge
+                      className={
+                        PLEDGE_STATUS_COLORS[pledge.status] || "bg-zinc-100 text-zinc-800"
+                      }
+                    >
+                      {pledge.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
