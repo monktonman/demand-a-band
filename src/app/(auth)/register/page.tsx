@@ -67,13 +67,13 @@ export default function RegisterPage() {
       });
 
       if (signInResult?.error) {
-        // Registration worked but auto-login failed — fall back to login page
-        router.push("/login?registered=true");
+        // Registration worked but auto-login failed — redirect to verify email page
+        router.push("/verify-email");
         return;
       }
 
-      // Redirect to onboarding for new users
-      router.push("/onboarding");
+      // Redirect to verify email page (user must verify before proceeding)
+      router.push("/verify-email");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");

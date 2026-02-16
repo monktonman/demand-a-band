@@ -41,6 +41,18 @@ function baseTemplate(content: string): string {
 </html>`;
 }
 
+export function emailVerificationEmail(name: string, verifyUrl: string): { subject: string; html: string } {
+  return {
+    subject: "Verify your email — Demand A Band",
+    html: baseTemplate(`
+      <h1>Verify your email</h1>
+      <p>Hey ${name}, thanks for signing up! Please verify your email address to complete your account setup.</p>
+      <a href="${verifyUrl}" class="btn">Verify Email Address</a>
+      <p style="font-size: 13px; color: #71717a; margin-top: 16px;">This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.</p>
+    `),
+  };
+}
+
 export function welcomeEmail(name: string): { subject: string; html: string } {
   return {
     subject: "Welcome to Demand A Band! 🎸",

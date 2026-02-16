@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
 import { normalizePhone } from "@/lib/sms";
+import { sendEmail } from "@/lib/resend";
+import { emailVerificationEmail } from "@/lib/email-templates";
 
 export async function POST(req: Request) {
   try {
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
       ? normalizePhone(validatedData.phone)
       : null;
 
-    // Create user
+    // Create user (emailVerified remains null until they verify)
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
@@ -39,6 +42,27 @@ export async function POST(req: Request) {
         smsOptIn: !!phone, // opted in by providing phone number
       },
     });
+
+    // Generate verification token
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await prisma.verificationToken.create({
+      data: {
+        identifier: validatedData.email,
+        token,
+        expires,
+      },
+    });
+
+    // Send verification email
+    try {
+      const verifyUrl = `${process.env.NEXTAUTH_URL || "https://demanda.band"}/api/auth/verify-email?token=${token}`;
+      const emailContent = emailVerificationEmail(validatedData.name || "there", verifyUrl);
+      await sendEmail({ to: validatedData.email, ...emailContent });
+    } catch (err) {
+      console.error("Failed to send verification email:", err);
+    }
 
     return NextResponse.json(
       {

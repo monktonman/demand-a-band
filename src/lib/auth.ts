@@ -48,6 +48,7 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           role: user.role,
           onboarded: user.onboarded,
+          emailVerified: user.emailVerified,
         };
       },
     }),
@@ -58,6 +59,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.onboarded = user.onboarded;
+        token.emailVerified = !!user.emailVerified;
         token.lastVerified = Date.now();
       }
 
@@ -72,6 +74,9 @@ export const authOptions: NextAuthOptions = {
         if (session.name !== undefined) {
           token.name = session.name;
         }
+        if (session.emailVerified !== undefined) {
+          token.emailVerified = session.emailVerified;
+        }
       }
 
       // Re-validate against database periodically (every 5 minutes)
@@ -82,7 +87,7 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { id: true, role: true, onboarded: true, email: true, name: true },
+            select: { id: true, role: true, onboarded: true, email: true, name: true, emailVerified: true },
           });
 
           if (!dbUser) {
@@ -94,6 +99,7 @@ export const authOptions: NextAuthOptions = {
           // Sync token with current database state
           token.role = dbUser.role;
           token.onboarded = dbUser.onboarded;
+          token.emailVerified = !!dbUser.emailVerified;
           token.name = dbUser.name;
           token.lastVerified = Date.now();
         } catch {
@@ -116,6 +122,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.onboarded = token.onboarded;
+        session.user.emailVerified = token.emailVerified;
       }
       return session;
     },

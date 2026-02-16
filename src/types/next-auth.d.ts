@@ -11,12 +11,14 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       onboarded?: boolean;
+      emailVerified?: boolean;
     };
   }
 
   interface User {
     role: UserRole;
     onboarded: boolean;
+    emailVerified: Date | null;
   }
 }
 
@@ -25,6 +27,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: UserRole;
     onboarded: boolean;
+    emailVerified: boolean;
     lastVerified?: number;
     invalidated?: boolean;
   }

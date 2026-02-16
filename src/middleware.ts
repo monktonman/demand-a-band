@@ -60,6 +60,21 @@ const authMiddleware = withAuth(
       }
     }
 
+    // If user's email is not verified, redirect to verify-email page
+    // Admin/Operator accounts are exempt (pre-existing trusted accounts)
+    const isStaffRole = token?.role === "ADMIN" || token?.role === "OPERATOR";
+    if (
+      token &&
+      !token.emailVerified &&
+      !isStaffRole &&
+      !pathname.startsWith("/verify-email") &&
+      !pathname.startsWith("/api") &&
+      !pathname.startsWith("/login") &&
+      !pathname.startsWith("/register")
+    ) {
+      return NextResponse.redirect(new URL("/verify-email", req.url));
+    }
+
     // If user is not onboarded, redirect to onboarding
     // (except if they're already on the onboarding page, API routes, or auth pages)
     if (
@@ -69,7 +84,8 @@ const authMiddleware = withAuth(
       !pathname.startsWith("/api") &&
       !pathname.startsWith("/admin") &&
       !pathname.startsWith("/login") &&
-      !pathname.startsWith("/register")
+      !pathname.startsWith("/register") &&
+      !pathname.startsWith("/verify-email")
     ) {
       return NextResponse.redirect(new URL("/onboarding", req.url));
     }
@@ -82,7 +98,7 @@ const authMiddleware = withAuth(
         const { pathname } = req.nextUrl;
 
         // Public routes that don't require auth
-        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows", "/beta", "/api/beta", "/api/spotify", "/api/external-events", "/api/feedback", "/check-in/verify"];
+        const publicPaths = ["/", "/login", "/register", "/verify-email", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows", "/beta", "/api/beta", "/api/spotify", "/api/external-events", "/api/feedback", "/check-in/verify"];
         if (publicPaths.some((p) => pathname.startsWith(p))) {
           return true;
         }
