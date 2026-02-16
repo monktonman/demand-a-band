@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Ticket, Music2, MapPin, Calendar, Users, Clock } from "lucide-react";
+import { Ticket, Music2, MapPin, Calendar, Users, Clock, Sparkles, Heart, DollarSign, Share2, ArrowRight } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 
@@ -49,19 +49,30 @@ export default async function MyEventsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
 
-  const pledges = await prisma.pledge.findMany({
-    where: { userId: session.user.id },
-    include: {
-      event: {
-        include: {
-          band: true,
-          venue: true,
-          _count: { select: { pledges: true } },
+  const [pledges, dreamShows] = await Promise.all([
+    prisma.pledge.findMany({
+      where: { userId: session.user.id },
+      include: {
+        event: {
+          include: {
+            band: true,
+            venue: true,
+            _count: { select: { pledges: true } },
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.dreamShow.findMany({
+      where: { creatorId: session.user.id },
+      include: {
+        band: true,
+        venue: true,
+        _count: { select: { votes: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const activePledges = pledges.filter((p) => p.status === "ACTIVE" || p.status === "CHARGED");
   const pastPledges = pledges.filter((p) => p.status === "CANCELLED" || p.status === "REFUNDED" || p.status === "PAYMENT_FAILED");
@@ -106,13 +117,22 @@ export default async function MyEventsPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-3 gap-4">
+      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <Ticket className="h-8 w-8 text-orange-600" />
             <div>
               <p className="text-2xl font-bold">{activePledges.length}</p>
               <p className="text-xs text-zinc-500">Active Shows</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <Sparkles className="h-8 w-8 text-amber-500" />
+            <div>
+              <p className="text-2xl font-bold">{dreamShows.length}</p>
+              <p className="text-xs text-zinc-500">Dream Shows</p>
             </div>
           </CardContent>
         </Card>
@@ -242,6 +262,95 @@ export default async function MyEventsPage() {
         </div>
       )}
 
+      {/* My Dream Shows */}
+      <div className="mb-10">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            My Dream Shows
+          </h2>
+          <Link href="/dream-show">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" />
+              Create New
+            </Button>
+          </Link>
+        </div>
+
+        {dreamShows.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {dreamShows.map((ds) => (
+              <Link
+                key={ds.id}
+                href={`/dream-show/${ds.shareCode}`}
+                className="block"
+              >
+                <Card className="h-full transition-all hover:shadow-lg hover:border-amber-200">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-100 to-amber-100">
+                        <Music2 className="h-6 w-6 text-orange-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold truncate">{ds.band.name}</h3>
+                        {ds.band.genres.length > 0 && (
+                          <p className="text-xs text-zinc-400 truncate">
+                            {ds.band.genres.slice(0, 3).join(" · ")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-1.5">
+                      {ds.venueSizeLabel && (
+                        <div className="flex items-center gap-1.5 text-sm text-zinc-600">
+                          <MapPin className="h-3.5 w-3.5 text-zinc-400" />
+                          <span>{ds.venueSizeLabel}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5 text-sm text-zinc-600">
+                        <DollarSign className="h-3.5 w-3.5 text-zinc-400" />
+                        <span>{ds.priceTierLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm text-zinc-600">
+                        <Calendar className="h-3.5 w-3.5 text-zinc-400" />
+                        <span>Created {formatDate(ds.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Heart className="h-4 w-4 text-pink-500" />
+                        <span className="text-sm font-medium">
+                          {ds._count.votes} {ds._count.votes === 1 ? "fan" : "fans"} want this
+                        </span>
+                      </div>
+                      <Share2 className="h-4 w-4 text-zinc-300" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <Card className="border-dashed border-2 border-zinc-200 bg-zinc-50/50">
+            <CardContent className="py-8 text-center">
+              <Sparkles className="mx-auto mb-3 h-10 w-10 text-zinc-300" />
+              <p className="font-medium text-zinc-600">No dream shows yet</p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Dream up your perfect show — pick an artist, venue size, and price.
+              </p>
+              <Link href="/dream-show">
+                <Button className="mt-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700" size="sm">
+                  Build a Dream Show
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       {/* Past / Inactive Pledges */}
       {pastPledges.length > 0 && (
         <div className="mb-10">
@@ -290,19 +399,27 @@ export default async function MyEventsPage() {
         </div>
       )}
 
-      {/* Empty state */}
-      {pledges.length === 0 && (
+      {/* Empty state — only show if no pledges AND no dream shows */}
+      {pledges.length === 0 && dreamShows.length === 0 && (
         <div className="py-16 text-center">
           <Ticket className="mx-auto mb-4 h-16 w-16 text-zinc-200" />
           <h2 className="text-2xl font-bold text-zinc-700">No shows yet</h2>
           <p className="mt-2 text-zinc-500 max-w-md mx-auto">
-            Browse proposed shows and pledge your support to make them happen in Baltimore!
+            Browse proposed shows and pledge your support, or dream up the perfect show and rally your friends!
           </p>
-          <Link href="/events">
-            <Button className="mt-6 bg-orange-600 hover:bg-orange-700" size="lg">
-              Browse Shows
-            </Button>
-          </Link>
+          <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link href="/events">
+              <Button className="bg-orange-600 hover:bg-orange-700" size="lg">
+                Browse Shows
+              </Button>
+            </Link>
+            <Link href="/dream-show">
+              <Button variant="outline" size="lg" className="gap-1.5">
+                <Sparkles className="h-4 w-4" />
+                Build a Dream Show
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
     </div>
