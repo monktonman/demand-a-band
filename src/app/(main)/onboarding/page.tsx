@@ -172,7 +172,7 @@ function OnboardingContent() {
 
   const handleFinish = () => {
     // Force a full page navigation to ensure the updated session is picked up
-    window.location.href = "/events";
+    window.location.href = "/my-events";
   };
 
   return (
@@ -253,6 +253,8 @@ function OnboardingContent() {
       {currentStep === 2 && (
         <StepComplete
           bandCount={selectedBands.length}
+          genreCount={selectedGenres.length}
+          cityCount={cityPreferences.length}
           onFinish={handleFinish}
         />
       )}
