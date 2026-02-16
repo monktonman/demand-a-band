@@ -22,17 +22,17 @@ const STEP_GENRES_TOUR: TourStep[] = [
 const STEP_BANDS_TOUR: TourStep[] = [
   {
     target: "onboarding-browse",
-    title: "Find Artists",
+    title: "Browse Artists",
     description:
-      "The \"For You\" tab shows artists matching your genres. You can also browse popular artists, search by name, or connect Spotify. Tap any artist card to select them.",
+      "The \"For You\" tab shows artists matching your genres. You can also browse popular artists, search by name, or connect Spotify. Tap any card to select an artist.",
     placement: "top",
   },
   {
-    target: "onboarding-selections",
-    title: "Your Selections",
+    target: "onboarding-nav",
+    title: "This Step Is Optional",
     description:
-      "Your chosen artists appear here. This step is optional — you can skip it and come back later from your settings.",
-    placement: "bottom",
+      "Pick artists you'd love to see, or skip for now — you can always add artists later from your settings. Your genre picks are already saved!",
+    placement: "top",
   },
 ];
 
@@ -72,7 +72,8 @@ export function OnboardingTour({ step }: OnboardingTourProps) {
   };
 
   const steps = stepsMap[step];
-  const tourId = `onboarding-${step}`;
+  // v2 suffix to reset localStorage for users who saw the old combined tour
+  const tourId = `onboarding-${step}-v2`;
 
   return <GuidedTour tourId={tourId} steps={steps} delay={600} />;
 }

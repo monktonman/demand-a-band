@@ -465,7 +465,7 @@ export function StepBands({
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between border-t border-zinc-100 pt-4">
+      <div data-tour="onboarding-nav" className="flex items-center justify-between border-t border-zinc-100 pt-4">
         <Button variant="outline" onClick={onBack}>
           <ChevronLeft className="mr-1 h-4 w-4" />
           Back
