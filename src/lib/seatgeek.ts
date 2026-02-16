@@ -149,7 +149,19 @@ function normalizeEvent(event: SGEvent): NormalizedEvent | null {
 }
 
 /**
- * Fetch music events from SeatGeek for the Baltimore area.
+ * Mid-Atlantic metro areas to fetch events from.
+ * SeatGeek supports lat/lon with range parameter for geographic search.
+ */
+const SG_METRO_AREAS = [
+  { label: "Baltimore", lat: "39.29", lon: "-76.61", range: "30mi" },
+  { label: "Washington DC", lat: "38.90", lon: "-77.04", range: "25mi" },
+  { label: "Philadelphia", lat: "39.95", lon: "-75.17", range: "25mi" },
+  { label: "Richmond", lat: "37.54", lon: "-77.44", range: "20mi" },
+  { label: "Norfolk/VA Beach", lat: "36.85", lon: "-76.29", range: "20mi" },
+];
+
+/**
+ * Fetch music events from SeatGeek for the mid-Atlantic region.
  * Returns normalized events ready for DB upsert.
  */
 export async function fetchBaltimoreSeatGeekEvents(): Promise<NormalizedEvent[]> {
@@ -168,55 +180,64 @@ export async function fetchBaltimoreSeatGeekEvents(): Promise<NormalizedEvent[]>
   const endDateStr = endDate.toISOString().split("T")[0];
 
   const allEvents: NormalizedEvent[] = [];
+  const seenIds = new Set<number>();
 
-  // Fetch up to 2 pages (500 events per page max)
-  for (let page = 1; page <= 2; page++) {
-    const params = new URLSearchParams({
-      client_id: clientId,
-      "venue.city": "Baltimore",
-      "venue.state": "MD",
-      "taxonomies.name": "concert",
-      "datetime_local.gte": startDate,
-      "datetime_local.lte": endDateStr,
-      per_page: "500",
-      page: page.toString(),
-      sort: "datetime_local.asc",
-    });
-
-    const url = `${SG_BASE_URL}/events?${params}`;
-
-    try {
-      const res = await fetch(url, {
-        headers: { Accept: "application/json" },
+  for (const metro of SG_METRO_AREAS) {
+    // Fetch up to 2 pages per metro (500 events per page max)
+    for (let page = 1; page <= 2; page++) {
+      const params = new URLSearchParams({
+        client_id: clientId,
+        lat: metro.lat,
+        lon: metro.lon,
+        range: metro.range,
+        "taxonomies.name": "concert",
+        "datetime_local.gte": startDate,
+        "datetime_local.lte": endDateStr,
+        per_page: "500",
+        page: page.toString(),
+        sort: "datetime_local.asc",
       });
 
-      if (!res.ok) {
-        console.error(`SeatGeek API error (page ${page}): ${res.status} ${res.statusText}`);
+      const url = `${SG_BASE_URL}/events?${params}`;
+
+      try {
+        const res = await fetch(url, {
+          headers: { Accept: "application/json" },
+        });
+
+        if (!res.ok) {
+          console.error(`SeatGeek API error (${metro.label}, page ${page}): ${res.status} ${res.statusText}`);
+          break;
+        }
+
+        const data: SGResponse = await res.json();
+
+        for (const event of data.events) {
+          // Deduplicate across metros (same event ID)
+          if (seenIds.has(event.id)) continue;
+          seenIds.add(event.id);
+
+          const normalized = normalizeEvent(event);
+          if (normalized) {
+            allEvents.push(normalized);
+          }
+        }
+
+        // If we've fetched all events, stop
+        if (data.events.length < 500 || page * 500 >= data.meta.total) break;
+
+        // Brief delay between pages
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      } catch (error) {
+        console.error(`SeatGeek fetch error (${metro.label}, page ${page}):`, error);
         break;
       }
-
-      const data: SGResponse = await res.json();
-
-      for (const event of data.events) {
-        const normalized = normalizeEvent(event);
-        if (normalized) {
-          allEvents.push(normalized);
-        }
-      }
-
-      // If we've fetched all events, stop
-      if (data.events.length < 500 || page * 500 >= data.meta.total) break;
-
-      // Brief delay between pages
-      if (page < 2) {
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-    } catch (error) {
-      console.error(`SeatGeek fetch error (page ${page}):`, error);
-      break;
     }
+
+    // Delay between metros
+    await new Promise((resolve) => setTimeout(resolve, 300));
   }
 
-  console.log(`Fetched ${allEvents.length} events from SeatGeek`);
+  console.log(`Fetched ${allEvents.length} events from SeatGeek (${SG_METRO_AREAS.length} metros)`);
   return allEvents;
 }

@@ -29,6 +29,94 @@ export function isSpotifyConfigured(): boolean {
 }
 
 // ------------------------------------
+// Client Credentials (server-to-server, no user auth)
+// Used for searching artists in the Spotify catalog
+// ------------------------------------
+
+let clientToken: { accessToken: string; expiresAt: number } | null = null;
+
+async function getClientCredentialsToken(): Promise<string> {
+  // Return cached token if still valid (with 60s buffer)
+  if (clientToken && Date.now() < clientToken.expiresAt - 60_000) {
+    return clientToken.accessToken;
+  }
+
+  const basicAuth = Buffer.from(
+    `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`
+  ).toString("base64");
+
+  const res = await fetch(SPOTIFY_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${basicAuth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ grant_type: "client_credentials" }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Spotify client credentials failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  clientToken = {
+    accessToken: data.access_token,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
+
+  return clientToken.accessToken;
+}
+
+/**
+ * Search for an artist on Spotify by name.
+ * Uses Client Credentials flow (no user auth needed).
+ * Returns the best match or null.
+ */
+export async function searchSpotifyArtist(
+  name: string
+): Promise<SpotifyArtist | null> {
+  if (!isSpotifyConfigured()) return null;
+
+  try {
+    const token = await getClientCredentialsToken();
+    const params = new URLSearchParams({
+      q: name,
+      type: "artist",
+      limit: "5",
+    });
+
+    const res = await fetch(`${SPOTIFY_API_BASE}/search?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const artists: SpotifyArtistRaw[] = data.artists?.items || [];
+
+    if (artists.length === 0) return null;
+
+    // Find best match — exact name match preferred, then closest match
+    const exactMatch = artists.find(
+      (a) => a.name.toLowerCase() === name.toLowerCase()
+    );
+    const best = exactMatch || artists[0];
+
+    return {
+      spotifyId: best.id,
+      name: best.name,
+      genres: best.genres || [],
+      popularity: best.popularity || 0,
+      imageUrl: best.images?.[0]?.url || null,
+      spotifyUrl: best.external_urls?.spotify || `https://open.spotify.com/artist/${best.id}`,
+    };
+  } catch (err) {
+    console.error(`[Spotify] Search failed for "${name}":`, err);
+    return null;
+  }
+}
+
+// ------------------------------------
 // OAuth URL builder
 // ------------------------------------
 

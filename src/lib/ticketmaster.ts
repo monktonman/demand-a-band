@@ -187,7 +187,21 @@ function normalizeEvent(event: TMEvent): NormalizedEvent | null {
 }
 
 /**
- * Fetch music events from Ticketmaster for the Baltimore area.
+ * Mid-Atlantic metro areas to fetch events from.
+ * Uses lat/lon + radius for broader geographic coverage.
+ * Baltimore is the primary market; DC, Philly, Richmond, etc. provide
+ * a richer artist catalog for the band database.
+ */
+const METRO_AREAS = [
+  { label: "Baltimore", latlong: "39.29,-76.61", radius: "30" },
+  { label: "Washington DC", latlong: "38.90,-77.04", radius: "25" },
+  { label: "Philadelphia", latlong: "39.95,-75.17", radius: "25" },
+  { label: "Richmond", latlong: "37.54,-77.44", radius: "20" },
+  { label: "Norfolk/VA Beach", latlong: "36.85,-76.29", radius: "20" },
+];
+
+/**
+ * Fetch music events from Ticketmaster for the mid-Atlantic region.
  * Returns normalized events ready for DB upsert.
  */
 export async function fetchBaltimoreEvents(): Promise<NormalizedEvent[]> {
@@ -206,59 +220,66 @@ export async function fetchBaltimoreEvents(): Promise<NormalizedEvent[]> {
   const endDateTime = endDate.toISOString().split(".")[0] + "Z";
 
   const allEvents: NormalizedEvent[] = [];
+  const seenIds = new Set<string>();
 
-  // Fetch up to 2 pages (400 events max)
-  for (let page = 0; page < 2; page++) {
-    const params = new URLSearchParams({
-      apikey: apiKey,
-      classificationName: "music",
-      city: "Baltimore",
-      stateCode: "MD",
-      radius: "30",
-      unit: "miles",
-      startDateTime,
-      endDateTime,
-      size: "200",
-      page: page.toString(),
-      sort: "date,asc",
-    });
-
-    const url = `${TM_BASE_URL}/events.json?${params}`;
-
-    try {
-      const res = await fetch(url, {
-        headers: { Accept: "application/json" },
+  for (const metro of METRO_AREAS) {
+    // Fetch up to 2 pages per metro (400 events max each)
+    for (let page = 0; page < 2; page++) {
+      const params = new URLSearchParams({
+        apikey: apiKey,
+        classificationName: "music",
+        latlong: metro.latlong,
+        radius: metro.radius,
+        unit: "miles",
+        startDateTime,
+        endDateTime,
+        size: "200",
+        page: page.toString(),
+        sort: "date,asc",
       });
 
-      if (!res.ok) {
-        console.error(`Ticketmaster API error (page ${page}): ${res.status} ${res.statusText}`);
+      const url = `${TM_BASE_URL}/events.json?${params}`;
+
+      try {
+        const res = await fetch(url, {
+          headers: { Accept: "application/json" },
+        });
+
+        if (!res.ok) {
+          console.error(`Ticketmaster API error (${metro.label}, page ${page}): ${res.status} ${res.statusText}`);
+          break;
+        }
+
+        const data: TMResponse = await res.json();
+        const events = data._embedded?.events || [];
+
+        for (const event of events) {
+          // Deduplicate across metros (same event ID)
+          if (seenIds.has(event.id)) continue;
+          seenIds.add(event.id);
+
+          const normalized = normalizeEvent(event);
+          if (normalized) {
+            allEvents.push(normalized);
+          }
+        }
+
+        // If we've fetched all pages, stop
+        const totalPages = data.page?.totalPages || 1;
+        if (page + 1 >= totalPages) break;
+
+        // Brief delay between pages to respect rate limits
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      } catch (error) {
+        console.error(`Ticketmaster fetch error (${metro.label}, page ${page}):`, error);
         break;
       }
-
-      const data: TMResponse = await res.json();
-      const events = data._embedded?.events || [];
-
-      for (const event of events) {
-        const normalized = normalizeEvent(event);
-        if (normalized) {
-          allEvents.push(normalized);
-        }
-      }
-
-      // If we've fetched all pages, stop
-      const totalPages = data.page?.totalPages || 1;
-      if (page + 1 >= totalPages) break;
-
-      // Brief delay between pages to respect rate limits
-      if (page < 1) {
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-    } catch (error) {
-      console.error(`Ticketmaster fetch error (page ${page}):`, error);
-      break;
     }
+
+    // Delay between metros to stay under 5 req/sec
+    await new Promise((resolve) => setTimeout(resolve, 300));
   }
 
-  console.log(`Fetched ${allEvents.length} events from Ticketmaster`);
+  console.log(`Fetched ${allEvents.length} events from Ticketmaster (${METRO_AREAS.length} metros)`);
   return allEvents;
 }
