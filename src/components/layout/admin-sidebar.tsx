@@ -11,6 +11,7 @@ import {
   MapPin,
   Music2,
   Users,
+  MessageSquarePlus,
   ArrowLeft,
 } from "lucide-react";
 
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/admin/venues", label: "Venues", icon: MapPin, adminOnly: true },
   { href: "/admin/bands", label: "Bands", icon: Music2, adminOnly: true },
   { href: "/admin/users", label: "Users", icon: Users, adminOnly: true },
+  { href: "/admin/feedback", label: "Feedback", icon: MessageSquarePlus, adminOnly: true },
 ];
 
 export function AdminSidebar() {

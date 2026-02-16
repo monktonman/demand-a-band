@@ -182,3 +182,49 @@ export async function PATCH(
     );
   }
 }
+
+// DELETE: Remove event (admin only, only PROPOSED or CANCELLED)
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    if (event.status === "CONFIRMED" || event.status === "COMPLETED") {
+      return NextResponse.json(
+        { error: "Cannot delete confirmed or completed events" },
+        { status: 400 }
+      );
+    }
+
+    // Delete pledges first, then the event
+    await prisma.$transaction([
+      prisma.pledge.deleteMany({ where: { eventId: id } }),
+      prisma.notification.deleteMany({ where: { eventId: id } }),
+      prisma.event.delete({ where: { id } }),
+    ]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting event:", error);
+    return NextResponse.json(
+      { error: "Failed to delete event" },
+      { status: 500 }
+    );
+  }
+}
