@@ -94,7 +94,7 @@ function VerifyEmailContent() {
                 </Button>
               </Link>
             ) : (
-              <Link href="/login?verified=true">
+              <Link href="/login?verified=true&callbackUrl=/onboarding">
                 <Button className="bg-orange-600 hover:bg-orange-700">
                   Sign In to Continue
                 </Button>
