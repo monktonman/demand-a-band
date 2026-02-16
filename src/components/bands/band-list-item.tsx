@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
-import { Music2, Users, TrendingUp, Sparkles } from "lucide-react";
+import { Music2, Users, TrendingUp, Sparkles, Heart, Check } from "lucide-react";
 
 interface BandListItemProps {
   band: {
@@ -21,13 +25,6 @@ function formatListeners(n: number): string {
   return n.toString();
 }
 
-function getPopularityColor(pop: number): string {
-  if (pop >= 80) return "bg-orange-600 text-white";
-  if (pop >= 60) return "bg-orange-100 text-orange-800";
-  if (pop >= 40) return "bg-zinc-100 text-zinc-700";
-  return "bg-zinc-50 text-zinc-500";
-}
-
 function getPopularityBar(pop: number): string {
   if (pop >= 80) return "bg-orange-500";
   if (pop >= 60) return "bg-orange-400";
@@ -36,9 +33,37 @@ function getPopularityBar(pop: number): string {
 }
 
 export function BandListItem({ band, index }: BandListItemProps) {
+  const { data: session } = useSession();
   const popularity = band.popularity ?? 0;
   const demandCount = band._count.userPreferences;
-  const eventCount = band._count.events;
+  const [added, setAdded] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const addToPreferences = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!session?.user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const res = await fetch("/api/preferences/bands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bandId: band.id }),
+      });
+      if (res.ok) {
+        setAdded(true);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
     <div className="group flex items-center gap-4 rounded-lg border border-zinc-100 bg-white px-4 py-3 transition-all hover:shadow-md hover:border-orange-200">
@@ -100,8 +125,23 @@ export function BandListItem({ band, index }: BandListItemProps) {
         </span>
       </div>
 
-      {/* Dream Show button */}
-      <div className="w-28 text-right">
+      {/* Actions */}
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={addToPreferences}
+          disabled={added || adding}
+          className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            added
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-zinc-200 text-zinc-600 hover:bg-pink-50 hover:text-pink-700 hover:border-pink-200"
+          }`}
+        >
+          {added ? (
+            <><Check className="h-3 w-3" />Added</>
+          ) : (
+            <><Heart className="h-3 w-3" />{adding ? "..." : "Want"}</>
+          )}
+        </button>
         <Link
           href={`/dream-show?band=${band.id}&bandName=${encodeURIComponent(band.name)}`}
           onClick={(e) => e.stopPropagation()}

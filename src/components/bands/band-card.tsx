@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   Card,
   CardContent,
@@ -7,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Music2, Users, TrendingUp, Sparkles } from "lucide-react";
+import { Music2, Users, TrendingUp, Sparkles, Heart, Check } from "lucide-react";
 
 interface BandCardProps {
   band: {
@@ -42,9 +46,38 @@ function getPopularityBar(pop: number): string {
 }
 
 export function BandCard({ band }: BandCardProps) {
+  const { data: session } = useSession();
   const popularity = band.popularity ?? 0;
   const demandCount = band._count.userPreferences;
   const eventCount = band._count.events;
+  const [added, setAdded] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const addToPreferences = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!session?.user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const res = await fetch("/api/preferences/bands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bandId: band.id }),
+      });
+      if (res.ok) {
+        setAdded(true);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
     <Card className="group h-full transition-all hover:shadow-lg hover:border-orange-200">
@@ -115,10 +148,25 @@ export function BandCard({ band }: BandCardProps) {
         </div>
       </CardContent>
 
-      <CardFooter className="pt-0">
+      <CardFooter className="pt-0 gap-2">
+        <button
+          onClick={addToPreferences}
+          disabled={added || adding}
+          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+            added
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-zinc-200 text-zinc-600 hover:bg-pink-50 hover:text-pink-700 hover:border-pink-200"
+          }`}
+        >
+          {added ? (
+            <><Check className="h-3.5 w-3.5" />Added</>
+          ) : (
+            <><Heart className="h-3.5 w-3.5" />{adding ? "Adding..." : "I Want This"}</>
+          )}
+        </button>
         <Link
           href={`/dream-show?band=${band.id}&bandName=${encodeURIComponent(band.name)}`}
-          className="w-full"
+          className="flex-1"
           onClick={(e) => e.stopPropagation()}
         >
           <Button

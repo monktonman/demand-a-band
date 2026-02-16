@@ -23,6 +23,8 @@ import {
   TrendingUp,
   Loader2,
   Info,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -34,6 +36,19 @@ type Band = {
   popularity: number | null;
   monthlyListeners: number | null;
 };
+
+function formatListeners(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
+  return n.toString();
+}
+
+function getPopularityBar(pop: number): string {
+  if (pop >= 80) return "bg-orange-500";
+  if (pop >= 60) return "bg-orange-400";
+  if (pop >= 40) return "bg-orange-300";
+  return "bg-zinc-300";
+}
 
 const VENUE_SIZES = [
   {
@@ -101,8 +116,14 @@ function DreamShowContent() {
   const [step, setStep] = useState(1);
   const [bands, setBands] = useState<Band[]>([]);
   const [bandSearch, setBandSearch] = useState("");
-  const [bandResults, setBandResults] = useState<Band[]>([]);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searching, setSearching] = useState(false);
+  const [genres, setGenres] = useState<string[]>([]);
+  const [selectedGenre, setSelectedGenre] = useState("");
+  const [bandPage, setBandPage] = useState(1);
+  const [totalBandPages, setTotalBandPages] = useState(1);
+  const [totalBands, setTotalBands] = useState(0);
+  const BANDS_PER_PAGE = 12;
 
   // Selections
   const [selectedBand, setSelectedBand] = useState<Band | null>(null);
@@ -135,36 +156,49 @@ function DreamShowContent() {
     }
   }, [searchParams, selectedBand]);
 
-  // Debounced band search
-  const searchBands = useCallback(async (query: string) => {
-    if (query.length < 2) {
-      setBandResults([]);
-      return;
-    }
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(bandSearch);
+      setBandPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [bandSearch]);
+
+  // Reset page on genre change
+  useEffect(() => {
+    setBandPage(1);
+  }, [selectedGenre]);
+
+  // Fetch bands with pagination, search, and genre filter
+  const fetchBands = useCallback(async () => {
     setSearching(true);
     try {
-      const res = await fetch(`/api/bands/search?q=${encodeURIComponent(query)}&limit=8`);
+      const params = new URLSearchParams({
+        page: bandPage.toString(),
+        limit: BANDS_PER_PAGE.toString(),
+        sortBy: "popularity",
+        sortOrder: "desc",
+      });
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (selectedGenre) params.set("genre", selectedGenre);
+
+      const res = await fetch(`/api/bands?${params}`);
       const data = await res.json();
-      setBandResults(data.bands || []);
+      setBands(data.bands || []);
+      setTotalBands(data.pagination?.total || 0);
+      setTotalBandPages(data.pagination?.totalPages || 1);
+      if (data.genres && genres.length === 0) setGenres(data.genres);
     } catch {
-      setBandResults([]);
+      setBands([]);
     } finally {
       setSearching(false);
     }
-  }, []);
+  }, [bandPage, debouncedSearch, selectedGenre]);
 
   useEffect(() => {
-    const timer = setTimeout(() => searchBands(bandSearch), 300);
-    return () => clearTimeout(timer);
-  }, [bandSearch, searchBands]);
-
-  // Load popular bands initially
-  useEffect(() => {
-    fetch("/api/bands?limit=12&sortBy=popularity&sortOrder=desc")
-      .then((r) => r.json())
-      .then((data) => setBands(data.bands || []))
-      .catch(() => {});
-  }, []);
+    fetchBands();
+  }, [fetchBands]);
 
   // Fetch price estimate when band + venue size are selected
   useEffect(() => {
@@ -414,59 +448,162 @@ function DreamShowContent() {
 
       {/* Step 1: Pick Artist */}
       {step === 1 && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <div className="text-center">
             <h2 className="text-xl font-bold">Who&apos;s your dream act?</h2>
-            <p className="mt-1 text-sm text-zinc-500">Think big — stadium headliners in a tiny club</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              Browse {totalBands > 0 ? `${totalBands.toLocaleString()} artists` : "artists"} — think big, stadium headliners in a tiny club
+            </p>
           </div>
 
-          <div className="relative mx-auto max-w-lg">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-            <input
-              type="text"
-              placeholder="Search for an artist..."
-              value={bandSearch}
-              onChange={(e) => setBandSearch(e.target.value)}
-              className="h-12 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-base outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-              autoFocus
-            />
-            {bandSearch && (
-              <button
-                onClick={() => { setBandSearch(""); setBandResults([]); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+          {/* Search + Genre filter */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                type="text"
+                placeholder="Search artists by name or genre..."
+                value={bandSearch}
+                onChange={(e) => setBandSearch(e.target.value)}
+                className="h-11 w-full rounded-lg border border-zinc-200 bg-white pl-10 pr-10 text-sm outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                autoFocus
+              />
+              {bandSearch && (
+                <button
+                  onClick={() => setBandSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {genres.length > 0 && (
+              <select
+                value={selectedGenre}
+                onChange={(e) => setSelectedGenre(e.target.value)}
+                className="h-11 rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-orange-400 sm:w-48"
               >
-                <X className="h-4 w-4" />
-              </button>
+                <option value="">All genres</option>
+                {genres.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
             )}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {(bandSearch.length >= 2 ? bandResults : bands).map((band) => (
-              <button
-                key={band.id}
-                onClick={() => { setSelectedBand(band); setStep(2); }}
-                className={`flex items-center gap-3 rounded-xl border-2 p-4 text-left transition-all hover:shadow-md ${
-                  selectedBand?.id === band.id
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-zinc-100 hover:border-orange-200"
-                }`}
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100">
-                  <Music2 className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold truncate">{band.name}</p>
-                  <p className="text-xs text-zinc-400 truncate">{band.genres.slice(0, 2).join(" · ")}</p>
-                </div>
-                {(band.popularity ?? 0) >= 70 && (
-                  <Star className="ml-auto h-4 w-4 shrink-0 text-amber-400" />
-                )}
-              </button>
-            ))}
-          </div>
+          {/* Active filter badge */}
+          {(debouncedSearch || selectedGenre) && (
+            <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <span>
+                {totalBands === 0 ? "No artists found" : `${totalBands.toLocaleString()} results`}
+              </span>
+              {selectedGenre && (
+                <button
+                  onClick={() => setSelectedGenre("")}
+                  className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700 hover:bg-orange-200"
+                >
+                  {selectedGenre}
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
 
-          {bandSearch.length >= 2 && bandResults.length === 0 && !searching && (
-            <p className="text-center text-sm text-zinc-400">No artists found for &ldquo;{bandSearch}&rdquo;</p>
+          {/* Artist grid */}
+          {searching && bands.length === 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-36 animate-pulse rounded-xl bg-zinc-100" />
+              ))}
+            </div>
+          ) : bands.length === 0 ? (
+            <div className="py-12 text-center">
+              <Music2 className="mx-auto mb-3 h-10 w-10 text-zinc-300" />
+              <p className="font-medium text-zinc-600">No artists found</p>
+              <p className="mt-1 text-sm text-zinc-400">Try a different search or genre filter</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {bands.map((band) => {
+                const pop = band.popularity ?? 0;
+                return (
+                  <button
+                    key={band.id}
+                    onClick={() => { setSelectedBand(band); setStep(2); }}
+                    className={`rounded-xl border-2 p-4 text-left transition-all hover:shadow-md ${
+                      selectedBand?.id === band.id
+                        ? "border-orange-500 bg-orange-50"
+                        : "border-zinc-100 hover:border-orange-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+                        <Music2 className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold truncate">{band.name}</p>
+                        <p className="text-xs text-zinc-400 truncate">
+                          {band.genres.slice(0, 3).join(" · ") || "Music"}
+                        </p>
+                      </div>
+                      {pop >= 70 && (
+                        <Star className="h-4 w-4 shrink-0 text-amber-400" />
+                      )}
+                    </div>
+
+                    {/* Popularity bar */}
+                    {pop > 0 && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-xs text-zinc-400 mb-1">
+                          <span className="flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3" />
+                            Popularity
+                          </span>
+                          <span>{pop}/100</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${getPopularityBar(pop)}`}
+                            style={{ width: `${pop}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {band.monthlyListeners && (
+                      <p className="mt-2 text-xs text-zinc-400">
+                        {formatListeners(band.monthlyListeners)} listeners
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalBandPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setBandPage(Math.max(1, bandPage - 1))}
+                disabled={bandPage === 1}
+                className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-30"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Prev
+              </button>
+              <span className="text-sm text-zinc-400">
+                Page {bandPage} of {totalBandPages}
+              </span>
+              <button
+                onClick={() => setBandPage(Math.min(totalBandPages, bandPage + 1))}
+                disabled={bandPage === totalBandPages}
+                className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-30"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
       )}
