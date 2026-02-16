@@ -20,6 +20,9 @@ import {
   Mail,
   Share2,
   Users,
+  TrendingUp,
+  Loader2,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -70,6 +73,15 @@ const PRICE_TIERS = [
   { label: "$1,000+", value: 1500, description: "Money can't buy" },
 ];
 
+type PriceEstimate = {
+  suggestedPrice: number;
+  priceLow: number;
+  priceHigh: number;
+  confidence: "high" | "medium" | "low";
+  dataSource: "direct" | "popularity" | "default";
+  explanation: string;
+};
+
 export default function DreamShowPage() {
   return (
     <Suspense fallback={
@@ -102,6 +114,9 @@ function DreamShowContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareCode, setShareCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [customPrice, setCustomPrice] = useState("");
 
   // Auto-select band from query params (e.g., from Artists page)
   useEffect(() => {
@@ -150,6 +165,33 @@ function DreamShowContent() {
       .then((data) => setBands(data.bands || []))
       .catch(() => {});
   }, []);
+
+  // Fetch price estimate when band + venue size are selected
+  useEffect(() => {
+    if (!selectedBand || !selectedVenueSize) {
+      setPriceEstimate(null);
+      return;
+    }
+
+    const fetchEstimate = async () => {
+      setEstimateLoading(true);
+      try {
+        const res = await fetch(
+          `/api/artist-price-estimate?bandId=${encodeURIComponent(selectedBand.id)}&venueSize=${encodeURIComponent(selectedVenueSize)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setPriceEstimate(data);
+        }
+      } catch {
+        // Silently fail — the user can still pick a price manually
+      } finally {
+        setEstimateLoading(false);
+      }
+    };
+
+    fetchEstimate();
+  }, [selectedBand, selectedVenueSize]);
 
   const handleSubmit = async () => {
     if (!selectedBand || !selectedVenueSize || !selectedPrice) return;
@@ -307,6 +349,8 @@ function DreamShowContent() {
               setSelectedPrice(null);
               setSelectedPriceLabel("");
               setShareCode("");
+              setPriceEstimate(null);
+              setCustomPrice("");
               setStep(1);
             }}
             variant="outline"
@@ -504,29 +548,132 @@ function DreamShowContent() {
             </CardContent>
           </Card>
 
-          <div className="mx-auto max-w-md space-y-3">
-            {PRICE_TIERS.map((tier) => (
-              <button
-                key={tier.value}
-                onClick={() => { setSelectedPrice(tier.value); setSelectedPriceLabel(tier.label); }}
-                className={`flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left transition-all hover:shadow-md ${
-                  selectedPrice === tier.value
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-zinc-100 hover:border-orange-200"
+          {/* Price Estimate Card */}
+          {estimateLoading && (
+            <div className="mx-auto max-w-md">
+              <Card className="border-blue-200 bg-blue-50/50">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                  <p className="text-sm text-blue-700">Estimating ticket price based on real show data...</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {priceEstimate && !estimateLoading && (
+            <div className="mx-auto max-w-md">
+              <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+                      <TrendingUp className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-emerald-900">Suggested: ~${priceEstimate.suggestedPrice}/ticket</p>
+                        {priceEstimate.confidence === "high" && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            High confidence
+                          </span>
+                        )}
+                        {priceEstimate.confidence === "medium" && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            Estimated
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm text-emerald-700">{priceEstimate.explanation}</p>
+                      <p className="mt-1.5 text-xs text-emerald-600/70">
+                        Range: ${priceEstimate.priceLow}–${priceEstimate.priceHigh}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedPrice(priceEstimate.suggestedPrice);
+                      setSelectedPriceLabel(`~$${priceEstimate.suggestedPrice} (estimated)`);
+                      setCustomPrice(priceEstimate.suggestedPrice.toString());
+                    }}
+                    className={`mt-3 w-full rounded-lg border-2 p-2.5 text-sm font-medium transition-all ${
+                      selectedPrice === priceEstimate.suggestedPrice
+                        ? "border-emerald-500 bg-emerald-100 text-emerald-800"
+                        : "border-emerald-200 bg-white text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {selectedPrice === priceEstimate.suggestedPrice ? (
+                      <span className="flex items-center justify-center gap-1.5">
+                        <Check className="h-4 w-4" /> Using suggested price
+                      </span>
+                    ) : (
+                      "Use suggested price"
+                    )}
+                  </button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Custom Price Input */}
+          <div className="mx-auto max-w-md">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-sm font-medium text-zinc-700">Or set your own price:</p>
+              {priceEstimate && (
+                <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
+                  <Info className="h-3 w-3" />
+                  Pick a tier or enter an amount
+                </span>
+              )}
+            </div>
+
+            <div className="relative mb-4">
+              <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                type="number"
+                placeholder="Enter your max ticket price..."
+                value={customPrice}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCustomPrice(val);
+                  const num = parseInt(val);
+                  if (num && num >= 15) {
+                    setSelectedPrice(num);
+                    setSelectedPriceLabel(`$${num}`);
+                  } else {
+                    setSelectedPrice(null);
+                    setSelectedPriceLabel("");
+                  }
+                }}
+                min={15}
+                max={10000}
+                className={`h-12 w-full rounded-xl border-2 bg-white pl-9 pr-20 text-base outline-none transition-colors ${
+                  customPrice && parseInt(customPrice) >= 15
+                    ? "border-orange-400 ring-2 ring-orange-100"
+                    : "border-zinc-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                 }`}
-              >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                  selectedPrice === tier.value ? "bg-orange-600 text-white" : "bg-zinc-100"
-                }`}>
-                  <DollarSign className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="font-semibold">{tier.label}</p>
-                  <p className="text-xs text-zinc-500">{tier.description}</p>
-                </div>
-                {selectedPrice === tier.value && <Check className="ml-auto h-5 w-5 text-orange-600" />}
-              </button>
-            ))}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400">per ticket</span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {PRICE_TIERS.map((tier) => (
+                <button
+                  key={tier.value}
+                  onClick={() => {
+                    setSelectedPrice(tier.value);
+                    setSelectedPriceLabel(tier.label);
+                    setCustomPrice(tier.value.toString());
+                  }}
+                  className={`rounded-lg border-2 px-2 py-2.5 text-center transition-all hover:shadow-sm ${
+                    selectedPrice === tier.value
+                      ? "border-orange-500 bg-orange-50 text-orange-700"
+                      : "border-zinc-100 text-zinc-600 hover:border-orange-200"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{tier.label}</p>
+                  <p className="text-[10px] text-zinc-400 mt-0.5">{tier.description}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mx-auto max-w-md space-y-3">
