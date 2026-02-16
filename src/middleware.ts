@@ -61,17 +61,15 @@ const authMiddleware = withAuth(
     }
 
     // If user is not onboarded, redirect to onboarding
-    // (except if they're already on the onboarding page or API routes)
+    // (except if they're already on the onboarding page, API routes, or auth pages)
     if (
       token &&
       !token.onboarded &&
       !pathname.startsWith("/onboarding") &&
       !pathname.startsWith("/api") &&
       !pathname.startsWith("/admin") &&
-      !pathname.startsWith("/events") &&
-      !pathname.startsWith("/bands") &&
-      !pathname.startsWith("/dream-show") &&
-      pathname !== "/"
+      !pathname.startsWith("/login") &&
+      !pathname.startsWith("/register")
     ) {
       return NextResponse.redirect(new URL("/onboarding", req.url));
     }
