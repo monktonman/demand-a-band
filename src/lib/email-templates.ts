@@ -48,13 +48,13 @@ export function welcomeEmail(name: string): { subject: string; html: string } {
       <h1>Welcome, ${name}!</h1>
       <p>You've joined the movement that puts the power of booking shows in the fans' hands.</p>
       <div class="highlight">
-        <strong>Here's how it works:</strong>
-        <p style="margin: 4px 0;">1. Tell us which bands you want to see</p>
-        <p style="margin: 4px 0;">2. Pledge when a show is proposed</p>
-        <p style="margin: 4px 0;">3. Only pay if enough fans commit</p>
+        <strong>Your preferences are saved! Here's what happens next:</strong>
+        <p style="margin: 4px 0;">1. We'll match you with upcoming shows based on your taste</p>
+        <p style="margin: 4px 0;">2. Pledge for shows you want to see — no charge unless it's confirmed</p>
+        <p style="margin: 4px 0;">3. When enough fans commit, the show is booked!</p>
       </div>
-      <p>Start by setting up your preferences — we'll use them to find shows you'll love.</p>
-      <a href="${process.env.NEXTAUTH_URL || ""}/onboarding" class="btn">Set Up Preferences</a>
+      <p>Browse upcoming shows or dream up the perfect concert — we'll notify you when there's a match.</p>
+      <a href="${process.env.NEXTAUTH_URL || ""}/events" class="btn">Browse Shows</a>
     `),
   };
 }

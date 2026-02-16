@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/resend";
+import { welcomeEmail } from "@/lib/email-templates";
 
 // GET: Fetch user's preferences
 export async function GET() {
@@ -37,6 +39,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { bandPreferences, cityPreferences, genrePreferences } = body;
+
+    // Check if this is the initial onboarding (not a later preference update)
+    const isFirstOnboarding = !session.user.onboarded;
 
     // Use a transaction to save everything atomically
     await prisma.$transaction(async (tx) => {
@@ -106,6 +111,25 @@ export async function POST(req: Request) {
         data: { onboarded: true },
       });
     });
+
+    // Send welcome email only on first onboarding, not preference updates
+    if (isFirstOnboarding) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, email: true },
+      });
+
+      if (user?.email) {
+        try {
+          await sendEmail({
+            to: user.email,
+            ...welcomeEmail(user.name || "there"),
+          });
+        } catch (err) {
+          console.error("Failed to send welcome email:", err);
+        }
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

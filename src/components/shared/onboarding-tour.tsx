@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { GuidedTour, type TourStep } from "./guided-tour";
 
 const STEP_GENRES_TOUR: TourStep[] = [
@@ -65,6 +66,8 @@ interface OnboardingTourProps {
 }
 
 export function OnboardingTour({ step }: OnboardingTourProps) {
+  const { data: session } = useSession();
+
   const stepsMap = {
     genres: STEP_GENRES_TOUR,
     bands: STEP_BANDS_TOUR,
@@ -72,8 +75,15 @@ export function OnboardingTour({ step }: OnboardingTourProps) {
   };
 
   const steps = stepsMap[step];
-  // v2 suffix to reset localStorage for users who saw the old combined tour
-  const tourId = `onboarding-${step}-v2`;
+  // v3 suffix to reset localStorage for all users (fixes missing tour bug)
+  const tourId = `onboarding-${step}-v3`;
 
-  return <GuidedTour tourId={tourId} steps={steps} delay={600} />;
+  return (
+    <GuidedTour
+      tourId={tourId}
+      userId={session?.user?.id}
+      steps={steps}
+      delay={600}
+    />
+  );
 }
