@@ -32,6 +32,7 @@ model User {
   cityPreferences  UserCityPreference[]
   genrePreferences UserGenrePreference[]
   pledges         Pledge[]
+  tickets         Ticket[]
   notifications   Notification[]
   dreamShows      DreamShow[]      @relation("dreamShowCreator")
   dreamShowVotes  DreamShowVote[]  @relation("dreamShowVoter")
@@ -215,6 +216,7 @@ model Event {
   band    Band     @relation(fields: [bandId], references: [id])
   venue   Venue    @relation(fields: [venueId], references: [id])
   pledges Pledge[]
+  tickets Ticket[]
 
   @@index([status])
   @@index([eventDate])
@@ -248,8 +250,9 @@ model Pledge {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tickets Ticket[]
 
   @@unique([userId, eventId])
   @@index([eventId])
@@ -262,6 +265,30 @@ enum PledgeStatus {
   CHARGED
   REFUNDED
   CANCELLED
+}
+
+// ============================================
+// TICKETS (generated when payment succeeds)
+// ============================================
+
+model Ticket {
+  id          String    @id @default(cuid())
+  pledgeId    String
+  eventId     String
+  userId      String
+  ticketCode  String    @unique
+  qrData      String
+  checkedInAt DateTime?
+  checkedInBy String?
+  createdAt   DateTime  @default(now())
+
+  pledge Pledge @relation(fields: [pledgeId], references: [id], onDelete: Cascade)
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([pledgeId])
+  @@index([ticketCode])
 }
 
 // ============================================

@@ -49,11 +49,12 @@ const authMiddleware = withAuth(
       if (!isStaff) {
         return NextResponse.redirect(new URL("/", req.url));
       }
-      // OPERATOR can only access dashboard, demand, and events
+      // OPERATOR can only access dashboard, demand, events, and check-in
       if (role === "OPERATOR") {
         const allowed = pathname === "/admin" ||
           pathname.startsWith("/admin/demand") ||
-          pathname.startsWith("/admin/events");
+          pathname.startsWith("/admin/events") ||
+          pathname.startsWith("/check-in");
         if (!allowed) {
           return NextResponse.redirect(new URL("/admin", req.url));
         }
@@ -82,7 +83,7 @@ const authMiddleware = withAuth(
         const { pathname } = req.nextUrl;
 
         // Public routes that don't require auth
-        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows", "/beta", "/api/beta", "/api/spotify", "/api/external-events", "/api/feedback"];
+        const publicPaths = ["/", "/login", "/register", "/api/auth", "/events", "/api/events", "/api/bands", "/bands", "/dream-show", "/api/dream-shows", "/beta", "/api/beta", "/api/spotify", "/api/external-events", "/api/feedback", "/check-in/verify"];
         if (publicPaths.some((p) => pathname.startsWith(p))) {
           return true;
         }

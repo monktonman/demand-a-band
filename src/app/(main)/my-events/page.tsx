@@ -20,6 +20,7 @@ import {
   Share2,
   ArrowRight,
   Sliders,
+  QrCode,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
@@ -74,6 +75,9 @@ export default async function MyEventsPage() {
             _count: { select: { pledges: true } },
           },
         },
+        tickets: {
+          select: { id: true, ticketCode: true, checkedInAt: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -99,8 +103,20 @@ export default async function MyEventsPage() {
     }),
   ]);
 
-  const activePledges = pledges.filter((p) => p.status === "ACTIVE" || p.status === "CHARGED");
-  const pastPledges = pledges.filter((p) => p.status === "CANCELLED" || p.status === "REFUNDED" || p.status === "PAYMENT_FAILED");
+  const activePledges = pledges.filter(
+    (p) =>
+      (p.status === "ACTIVE" || p.status === "CHARGED") &&
+      p.event.status !== "COMPLETED"
+  );
+  const pastShows = pledges.filter(
+    (p) => p.status === "CHARGED" && p.event.status === "COMPLETED"
+  );
+  const pastPledges = pledges.filter(
+    (p) =>
+      p.status === "CANCELLED" ||
+      p.status === "REFUNDED" ||
+      p.status === "PAYMENT_FAILED"
+  );
 
   const totalPledged = pledges.reduce((sum, p) => sum + Number(p.totalAmount), 0);
   const totalTickets = pledges
@@ -272,13 +288,27 @@ export default async function MyEventsPage() {
                                 at {pledge.event.venue.name}
                               </p>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex items-center gap-2">
                               <Badge className={PLEDGE_STATUS_COLORS[pledge.status]}>
                                 {PLEDGE_STATUS_LABELS[pledge.status]}
                               </Badge>
                               <Badge className={EVENT_STATUS_COLORS[pledge.event.status]}>
                                 {EVENT_STATUS_LABELS[pledge.event.status]}
                               </Badge>
+                              {pledge.status === "CHARGED" && pledge.tickets.length > 0 && (
+                                <Link
+                                  href={`/my-events/tickets/${pledge.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Button
+                                    size="sm"
+                                    className="gap-1.5 bg-orange-600 hover:bg-orange-700 text-white h-7 text-xs"
+                                  >
+                                    <QrCode className="h-3.5 w-3.5" />
+                                    View Tickets
+                                  </Button>
+                                </Link>
+                              )}
                             </div>
                           </div>
 
@@ -544,6 +574,62 @@ export default async function MyEventsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Past Shows (completed events with tickets) */}
+      {pastShows.length > 0 && (
+        <div className="mb-10">
+          <h2 className="mb-4 text-xl font-bold flex items-center gap-2">
+            <Music2 className="h-5 w-5 text-orange-600" />
+            Past Shows
+          </h2>
+          <div className="space-y-3">
+            {pastShows.map((pledge) => {
+              const checkedIn = pledge.tickets.filter((t) => t.checkedInAt).length;
+              return (
+                <Card
+                  key={pledge.id}
+                  className="border-orange-100 bg-gradient-to-r from-orange-50/50 to-amber-50/50"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-200 to-amber-200">
+                        <Music2 className="h-6 w-6 text-orange-700" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-zinc-800">
+                          {pledge.event.band.name}
+                        </p>
+                        <p className="text-sm text-zinc-500">
+                          {pledge.event.venue.name} &middot;{" "}
+                          {formatDate(pledge.event.eventDate)}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {pledge.tickets.length} ticket{pledge.tickets.length > 1 ? "s" : ""}
+                          </Badge>
+                          {checkedIn > 0 && (
+                            <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                              {checkedIn} attended
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {pledge.tickets.length > 0 && (
+                        <Link href={`/my-events/tickets/${pledge.id}`}>
+                          <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                            <QrCode className="h-3.5 w-3.5" />
+                            View Tickets
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Past / Inactive Pledges */}
       {pastPledges.length > 0 && (

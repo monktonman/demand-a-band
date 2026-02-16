@@ -9,6 +9,8 @@ import {
   notifyEventCancelled,
   notifyPaymentFailed,
 } from "@/lib/notifications";
+import { generateTicketsForPledge } from "@/lib/tickets";
+import { sendTicketEmails } from "@/lib/notifications";
 
 // GET: Fetch single event (admin or operator)
 export async function GET(
@@ -184,6 +186,17 @@ export async function PATCH(
                 paymentIntent.status === "succeeded" ? new Date() : null,
             },
           });
+
+          // Generate tickets if payment succeeded immediately
+          if (paymentIntent.status === "succeeded") {
+            generateTicketsForPledge(pledge.id)
+              .then((tickets) => {
+                if (tickets.length > 0) {
+                  sendTicketEmails(pledge.id).catch(console.error);
+                }
+              })
+              .catch(console.error);
+          }
 
           results.push({ pledgeId: pledge.id, success: true });
         } catch (err) {

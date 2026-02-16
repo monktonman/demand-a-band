@@ -8,6 +8,7 @@ import {
   thresholdMetEmail,
   paymentFailedEmail,
   newEventMatchEmail,
+  ticketEmail,
 } from "@/lib/email-templates";
 import {
   pledgeConfirmationSms,
@@ -16,8 +17,10 @@ import {
   thresholdMetSms,
   newEventMatchSms,
   paymentFailedSms,
+  ticketReadySms,
 } from "@/lib/sms-templates";
-import { formatDate, formatCurrency, formatCurrencyDecimal } from "@/lib/utils";
+import { formatDate, formatTime, formatCurrency, formatCurrencyDecimal } from "@/lib/utils";
+import { generateQrDataUri } from "@/lib/tickets";
 
 type NotificationType =
   | "EVENT_CREATED"
@@ -392,4 +395,59 @@ export async function notifyMatchingFans(eventId: string) {
   }
 
   console.log(`[Notify] Sent new event notifications to ${totalNotified} fans (${bandMatches.length} band + ${dedupedGenreUsers.length} genre) for ${event.band.name}`);
+}
+
+// Send ticket emails with QR codes for a charged pledge
+export async function sendTicketEmails(pledgeId: string) {
+  const pledge = await prisma.pledge.findUnique({
+    where: { id: pledgeId },
+    include: {
+      user: { select: { name: true, email: true, phone: true, smsOptIn: true } },
+      event: {
+        include: {
+          band: true,
+          venue: true,
+        },
+      },
+      tickets: true,
+    },
+  });
+
+  if (!pledge || pledge.tickets.length === 0) {
+    console.log(`[Tickets] No pledge or tickets found for ${pledgeId}`);
+    return;
+  }
+
+  const formattedDate = formatDate(pledge.event.eventDate);
+  const doorsTime = pledge.event.doorsTime ? formatTime(pledge.event.doorsTime) : null;
+  const showTime = pledge.event.showTime ? formatTime(pledge.event.showTime) : null;
+
+  // Generate QR code data URIs for each ticket
+  const ticketsWithQr = await Promise.all(
+    pledge.tickets.map(async (ticket) => ({
+      ticketCode: ticket.ticketCode,
+      qrDataUri: await generateQrDataUri(ticket.ticketCode),
+    }))
+  );
+
+  // Send email with embedded QR codes
+  if (pledge.user.email) {
+    const email = ticketEmail(
+      pledge.user.name || "Fan",
+      pledge.event.band.name,
+      pledge.event.venue.name,
+      formattedDate,
+      doorsTime,
+      showTime,
+      ticketsWithQr
+    );
+    await sendEmail({ to: pledge.user.email, ...email });
+    console.log(`[Tickets] Sent ticket email to ${pledge.user.email} for ${pledge.event.band.name}`);
+  }
+
+  // Send SMS notification
+  await maybeSendSms(
+    pledge.user,
+    ticketReadySms(pledge.event.band.name, pledge.event.venue.name, pledge.tickets.length)
+  );
 }

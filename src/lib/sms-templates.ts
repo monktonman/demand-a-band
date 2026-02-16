@@ -45,6 +45,14 @@ export function newEventMatchSms(
   return `DAB: ${bandName} at ${venueName} on ${eventDate}! Tickets from ${ticketPrice}. Pledge now: ${BASE_URL}/events/${eventSlug}`;
 }
 
+export function ticketReadySms(
+  bandName: string,
+  venueName: string,
+  ticketCount: number
+): string {
+  return `DAB: 🎫 Your ${ticketCount} ticket${ticketCount > 1 ? "s" : ""} for ${bandName} at ${venueName} ${ticketCount > 1 ? "are" : "is"} ready! View: ${BASE_URL}/my-events`;
+}
+
 export function paymentFailedSms(
   bandName: string,
   venueName: string

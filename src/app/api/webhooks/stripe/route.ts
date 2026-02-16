@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
+import { generateTicketsForPledge } from "@/lib/tickets";
+import { sendTicketEmails } from "@/lib/notifications";
 
 // Disable body parsing for webhook verification
 export const dynamic = "force-dynamic";
@@ -49,6 +51,15 @@ export async function POST(req: Request) {
             },
           });
           console.log(`Pledge ${pledgeId} charged successfully`);
+
+          // Generate tickets (idempotent — skips if already generated)
+          generateTicketsForPledge(pledgeId)
+            .then((tickets) => {
+              if (tickets.length > 0) {
+                sendTicketEmails(pledgeId).catch(console.error);
+              }
+            })
+            .catch(console.error);
         }
         break;
       }

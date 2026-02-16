@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Loader2,
   Users,
@@ -23,7 +24,13 @@ import {
   Calendar,
   AlertTriangle,
   Pencil,
+  QrCode,
+  Search,
+  Download,
+  ClipboardCheck,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
 import { use } from "react";
 
@@ -76,6 +83,21 @@ export default function AdminEventDetailPage({
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [guestList, setGuestList] = useState<{
+    stats: { totalTickets: number; checkedIn: number; remaining: number };
+    tickets: {
+      id: string;
+      ticketCode: string;
+      fanName: string;
+      fanEmail: string;
+      checkedInAt: string | null;
+      checkedInBy: string | null;
+      pledgeQuantity: number;
+    }[];
+  } | null>(null);
+  const [guestListLoading, setGuestListLoading] = useState(false);
+  const [guestFilter, setGuestFilter] = useState("");
+  const [guestView, setGuestView] = useState<"all" | "checked-in" | "remaining">("all");
 
   const loadEvent = async () => {
     const res = await fetch(`/api/admin/events/${id}`);
@@ -84,9 +106,66 @@ export default function AdminEventDetailPage({
     setIsLoading(false);
   };
 
+  const loadGuestList = async () => {
+    setGuestListLoading(true);
+    try {
+      const res = await fetch(`/api/check-in?eventId=${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setGuestList({ stats: data.stats, tickets: data.tickets });
+      }
+    } catch (err) {
+      console.error("Failed to load guest list:", err);
+    } finally {
+      setGuestListLoading(false);
+    }
+  };
+
+  const handleManualCheckIn = async (ticketCode: string) => {
+    try {
+      const res = await fetch("/api/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketCode, eventId: id }),
+      });
+      if (res.ok) {
+        await loadGuestList();
+      }
+    } catch (err) {
+      console.error("Manual check-in failed:", err);
+    }
+  };
+
+  const exportGuestListCsv = () => {
+    if (!guestList) return;
+    const headers = ["Name", "Email", "Ticket Code", "Checked In", "Checked In At"];
+    const rows = guestList.tickets.map((t) => [
+      t.fanName,
+      t.fanEmail,
+      t.ticketCode,
+      t.checkedInAt ? "Yes" : "No",
+      t.checkedInAt ? new Date(t.checkedInAt).toLocaleString() : "",
+    ]);
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `guest-list-${id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     loadEvent();
   }, [id]);
+
+  // Load guest list when event is confirmed
+  useEffect(() => {
+    if (event?.status === "CONFIRMED" || event?.status === "COMPLETED") {
+      loadGuestList();
+    }
+  }, [event?.status]);
 
   const handleAction = async (action: "confirm" | "cancel") => {
     if (action === "confirm") setIsConfirming(true);
@@ -362,6 +441,167 @@ export default function AdminEventDetailPage({
           <AlertTriangle className="h-5 w-5" />
           This event has been cancelled. All active pledges were released.
         </div>
+      )}
+
+      {/* Guest List & Check-In (for CONFIRMED/COMPLETED events) */}
+      {(event.status === "CONFIRMED" || event.status === "COMPLETED") && guestList && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-green-600" />
+                Guest List & Check-In
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Link href={`/check-in/${id}`} target="_blank">
+                  <Button size="sm" className="gap-1.5 bg-orange-600 hover:bg-orange-700">
+                    <QrCode className="h-3.5 w-3.5" />
+                    Open Scanner
+                  </Button>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={exportGuestListCsv}
+                  className="gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+            <CardDescription>
+              {guestList.stats.checkedIn} of {guestList.stats.totalTickets} checked in
+              {" "}&middot;{" "}
+              {guestList.stats.remaining} remaining
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Check-in progress bar */}
+            <div className="mb-4">
+              <div className="h-3 rounded-full bg-zinc-100 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-green-500 transition-all"
+                  style={{
+                    width: `${
+                      guestList.stats.totalTickets > 0
+                        ? (guestList.stats.checkedIn / guestList.stats.totalTickets) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="mb-4 flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <Input
+                  placeholder="Search by name or ticket code..."
+                  value={guestFilter}
+                  onChange={(e) => setGuestFilter(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-1">
+                {(["all", "checked-in", "remaining"] as const).map((view) => (
+                  <Button
+                    key={view}
+                    size="sm"
+                    variant={guestView === view ? "default" : "outline"}
+                    className={guestView === view ? "bg-orange-600 hover:bg-orange-700" : ""}
+                    onClick={() => setGuestView(view)}
+                  >
+                    {view === "all"
+                      ? `All (${guestList.stats.totalTickets})`
+                      : view === "checked-in"
+                      ? `In (${guestList.stats.checkedIn})`
+                      : `Left (${guestList.stats.remaining})`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Guest table */}
+            <div className="rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fan</TableHead>
+                    <TableHead>Ticket Code</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {guestList.tickets
+                    .filter((t) => {
+                      // Filter by view
+                      if (guestView === "checked-in" && !t.checkedInAt) return false;
+                      if (guestView === "remaining" && t.checkedInAt) return false;
+                      // Filter by search
+                      if (guestFilter) {
+                        const q = guestFilter.toLowerCase();
+                        return (
+                          t.fanName.toLowerCase().includes(q) ||
+                          t.fanEmail.toLowerCase().includes(q) ||
+                          t.ticketCode.toLowerCase().includes(q)
+                        );
+                      }
+                      return true;
+                    })
+                    .map((ticket) => (
+                      <TableRow key={ticket.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm">{ticket.fanName}</p>
+                            <p className="text-xs text-zinc-400">{ticket.fanEmail}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs font-mono bg-zinc-100 px-2 py-1 rounded">
+                            {ticket.ticketCode}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          {ticket.checkedInAt ? (
+                            <div className="flex items-center gap-1.5">
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              <span className="text-xs text-green-700">
+                                {new Date(ticket.checkedInAt).toLocaleTimeString()}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-zinc-400">Not checked in</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!ticket.checkedInAt && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => handleManualCheckIn(ticket.ticketCode)}
+                            >
+                              <CheckCircle className="h-3 w-3" />
+                              Check In
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {guestListLoading && (
+              <div className="mt-4 flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Pledges table */}

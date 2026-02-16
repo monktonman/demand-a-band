@@ -170,6 +170,57 @@ export function newEventMatchEmail(
   };
 }
 
+export function ticketEmail(
+  name: string,
+  bandName: string,
+  venueName: string,
+  eventDate: string,
+  doorsTime: string | null,
+  showTime: string | null,
+  tickets: { ticketCode: string; qrDataUri: string }[]
+): { subject: string; html: string } {
+  const ticketCount = tickets.length;
+  const timeInfo = [
+    doorsTime ? `🚪 Doors: ${doorsTime}` : null,
+    showTime ? `🎵 Show: ${showTime}` : null,
+  ].filter(Boolean).join("<br>");
+
+  const ticketBlocks = tickets
+    .map(
+      (ticket, i) => `
+      <div style="background: ${BRAND_BG}; border-radius: 12px; padding: 20px; margin: 16px 0; text-align: center; border: 2px dashed ${BRAND_COLOR};">
+        <p style="font-size: 12px; color: #71717a; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">
+          Ticket ${ticketCount > 1 ? `${i + 1} of ${ticketCount}` : ""}
+        </p>
+        <img src="${ticket.qrDataUri}" alt="QR Code" width="200" height="200" style="display: block; margin: 0 auto 12px;" />
+        <p style="font-family: monospace; font-size: 18px; font-weight: 700; color: #18181b; margin: 0; letter-spacing: 2px;">
+          ${ticket.ticketCode}
+        </p>
+      </div>`
+    )
+    .join("");
+
+  return {
+    subject: `Your ticket${ticketCount > 1 ? "s" : ""} for ${bandName} at ${venueName} 🎫`,
+    html: baseTemplate(`
+      <h1>Your Ticket${ticketCount > 1 ? "s Are" : " Is"} Ready! 🎫</h1>
+      <p>Hey ${name}, you're going to see <strong>${bandName}</strong>! Show ${ticketCount > 1 ? "these QR codes" : "this QR code"} at the door for entry.</p>
+      <div class="highlight">
+        <p style="margin: 4px 0;"><strong>${bandName}</strong></p>
+        <p style="margin: 4px 0;">📍 ${venueName}</p>
+        <p style="margin: 4px 0;">📅 ${eventDate}</p>
+        ${timeInfo ? `<p style="margin: 4px 0;">${timeInfo}</p>` : ""}
+        <p style="margin: 4px 0;">🎫 ${ticketCount} ticket${ticketCount > 1 ? "s" : ""}</p>
+      </div>
+      ${ticketBlocks}
+      <p style="text-align: center; color: #71717a; font-size: 13px; margin-top: 16px;">
+        You can also view your tickets anytime in your account.
+      </p>
+      <a href="${process.env.NEXTAUTH_URL || ""}/my-events" class="btn">View My Tickets</a>
+    `),
+  };
+}
+
 export function paymentFailedEmail(
   name: string,
   bandName: string,
