@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2, CalendarRange, Info, TrendingUp, Sparkles, Search, X, Music2, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, TrendingUp, Sparkles, Search, X, Music2 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, calculateServiceFee } from "@/lib/utils";
-import { DateTimePicker, DatePicker } from "@/components/ui/date-time-picker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 interface Band {
   id: string;
@@ -397,48 +397,6 @@ function CreateEventForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarRange className="h-5 w-5 text-orange-600" />
-              Availability Window
-            </CardTitle>
-            <CardDescription>
-              The date range when the band and venue are both available.
-              Fans will see this window — the exact date is locked in when the event is confirmed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 mt-0.5 text-blue-600" />
-                <p className="text-xs text-blue-700">
-                  Set the window to the range of dates both the band and venue are available.
-                  The &quot;Target Date&quot; below is shown as an estimate — it becomes the confirmed date once the event is locked in.
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Window Start</Label>
-                <DatePicker
-                  value={formData.windowStart}
-                  onChange={(val) => updateField("windowStart", val)}
-                  minDate={new Date()}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Window End</Label>
-                <DatePicker
-                  value={formData.windowEnd}
-                  onChange={(val) => updateField("windowEnd", val)}
-                  minDate={new Date()}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>Schedule & Pricing</CardTitle>
             {isFromDemand && (
               <CardDescription className="text-orange-600">
@@ -446,38 +404,31 @@ function CreateEventForm() {
               </CardDescription>
             )}
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-orange-600" />
-                  Target Event Date & Time
-                </Label>
+                <Label>Event Date & Time</Label>
                 <DateTimePicker
                   value={formData.eventDate}
                   onChange={(val) => updateField("eventDate", val)}
                   required
                   includeTime={true}
                   minDate={new Date()}
+                  placeholder="Pick event date"
                 />
-                <p className="text-xs text-zinc-400">
-                  Shown as estimate until confirmed
-                </p>
               </div>
               <div className="space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-zinc-500" />
-                  Pledge Deadline
-                </Label>
+                <Label>Pledge Deadline</Label>
                 <DateTimePicker
                   value={formData.pledgeDeadline}
                   onChange={(val) => updateField("pledgeDeadline", val)}
                   required
                   includeTime={true}
                   minDate={new Date()}
+                  placeholder="Pick deadline"
                 />
                 <p className="text-xs text-zinc-400">
-                  Fans must pledge by this date & time
+                  Fans must pledge by this date
                 </p>
               </div>
             </div>

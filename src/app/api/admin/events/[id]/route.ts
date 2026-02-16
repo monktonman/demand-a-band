@@ -9,13 +9,13 @@ import {
   notifyPaymentFailed,
 } from "@/lib/notifications";
 
-// PATCH: Update event status (admin only)
+// PATCH: Update event status (admin or operator)
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -183,13 +183,13 @@ export async function PATCH(
   }
 }
 
-// DELETE: Remove event (admin only, only PROPOSED or CANCELLED)
+// DELETE: Remove event (admin or operator, only PROPOSED or CANCELLED)
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

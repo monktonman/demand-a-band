@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DayPicker } from "react-day-picker";
 import { format, parse, setHours, setMinutes, isValid } from "date-fns";
+import { CalendarDays, ChevronDown } from "lucide-react";
 import "react-day-picker/style.css";
 
 interface DateTimePickerProps {
@@ -32,24 +33,18 @@ function generateTimeOptions(): { label: string; value: string }[] {
 
 const TIME_OPTIONS = generateTimeOptions();
 
-// Common time presets for quick selection
-const QUICK_TIMES = [
-  { label: "6:00 PM", value: "18:00" },
-  { label: "7:00 PM", value: "19:00" },
-  { label: "7:30 PM", value: "19:30" },
-  { label: "8:00 PM", value: "20:00" },
-  { label: "9:00 PM", value: "21:00" },
-];
-
 export function DateTimePicker({
   value,
   onChange,
   required = false,
   includeTime = true,
   minDate,
+  placeholder,
 }: DateTimePickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [selectedTime, setSelectedTime] = useState("19:00"); // default 7 PM
+  const [selectedTime, setSelectedTime] = useState("19:00");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Parse incoming value
   useEffect(() => {
@@ -57,16 +52,12 @@ export function DateTimePicker({
       setSelectedDate(undefined);
       return;
     }
-
-    // Try parsing "YYYY-MM-DDTHH:mm" or ISO string
     let parsed: Date | undefined;
-
     if (value.includes("T")) {
       parsed = new Date(value);
     } else {
       parsed = parse(value, "yyyy-MM-dd", new Date());
     }
-
     if (parsed && isValid(parsed)) {
       setSelectedDate(parsed);
       if (includeTime) {
@@ -75,19 +66,29 @@ export function DateTimePicker({
         setSelectedTime(`${h}:${m}`);
       }
     }
-  }, []); // Only parse on mount to avoid loops
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Combine date + time and emit
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [open]);
+
   const emitChange = (date: Date | undefined, time: string) => {
     if (!date) {
       onChange("");
       return;
     }
-
     if (includeTime) {
       const [h, m] = time.split(":").map(Number);
       const combined = setMinutes(setHours(date, h), m);
-      // Format as "YYYY-MM-DDTHH:mm" (what datetime-local uses)
       onChange(format(combined, "yyyy-MM-dd'T'HH:mm"));
     } else {
       onChange(format(date, "yyyy-MM-dd"));
@@ -97,6 +98,10 @@ export function DateTimePicker({
   const handleDaySelect = (day: Date | undefined) => {
     setSelectedDate(day);
     emitChange(day, selectedTime);
+    // Auto-close if date-only mode
+    if (!includeTime) {
+      setOpen(false);
+    }
   };
 
   const handleTimeChange = (time: string) => {
@@ -104,81 +109,90 @@ export function DateTimePicker({
     emitChange(selectedDate, time);
   };
 
+  // Format the display text for the trigger button
+  const getDisplayText = () => {
+    if (!selectedDate) return placeholder || (includeTime ? "Pick date & time" : "Pick a date");
+    const dateStr = format(selectedDate, "MMM d, yyyy");
+    if (!includeTime) return dateStr;
+    const timeLabel = TIME_OPTIONS.find((t) => t.value === selectedTime)?.label || selectedTime;
+    return `${dateStr} at ${timeLabel}`;
+  };
+
   return (
-    <div className="space-y-3">
-      {/* Calendar - uses react-day-picker base CSS + our overrides via style tag */}
-      <style>{`
-        .rdp-dab .rdp-month_caption { font-weight: 600; font-size: 0.925rem; }
-        .rdp-dab .rdp-day { border-radius: 0.375rem; }
-        .rdp-dab .rdp-day:hover { background: #fff7ed; }
-        .rdp-dab .rdp-selected .rdp-day_button,
-        .rdp-dab .rdp-day_button.rdp-selected { background: #ea580c !important; color: white !important; border-radius: 0.375rem; font-weight: 600; }
-        .rdp-dab .rdp-selected:hover .rdp-day_button { background: #c2410c !important; }
-        .rdp-dab .rdp-today:not(.rdp-selected) .rdp-day_button { color: #ea580c; font-weight: 700; }
-        .rdp-dab .rdp-disabled .rdp-day_button { color: #d4d4d8; cursor: not-allowed; }
-        .rdp-dab .rdp-disabled:hover { background: transparent; }
-        .rdp-dab .rdp-chevron { fill: #71717a; }
-        .rdp-dab { --rdp-accent-color: #ea580c; --rdp-accent-background-color: #fff7ed; }
-      `}</style>
-      <div className="rounded-lg border border-zinc-200 bg-white p-2">
-        <DayPicker
-          mode="single"
-          selected={selectedDate}
-          onSelect={handleDaySelect}
-          disabled={minDate ? { before: minDate } : undefined}
-          className="rdp-dab"
-        />
-      </div>
+    <div ref={containerRef} className="relative">
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex h-10 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm transition-colors ${
+          open
+            ? "border-orange-400 ring-2 ring-orange-100"
+            : "border-input hover:border-zinc-400"
+        } ${!selectedDate ? "text-muted-foreground" : "text-foreground"}`}
+      >
+        <span className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-zinc-400" />
+          {getDisplayText()}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
 
-      {/* Selected date display */}
-      {selectedDate && (
-        <div className="text-sm font-medium text-zinc-700 bg-orange-50 border border-orange-200 rounded-md px-3 py-2">
-          {format(selectedDate, "EEEE, MMMM d, yyyy")}
-          {includeTime && (
-            <span className="text-orange-600">
-              {" "}at {TIME_OPTIONS.find((t) => t.value === selectedTime)?.label || selectedTime}
-            </span>
-          )}
-        </div>
-      )}
+      {/* Hidden input for form validation */}
+      {required && <input type="hidden" value={value || ""} required />}
 
-      {/* Time picker */}
-      {includeTime && selectedDate && (
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-500 uppercase tracking-wide">
-            Time
-          </label>
+      {/* Popover dropdown */}
+      {open && (
+        <div className="absolute z-50 mt-1 rounded-lg border border-zinc-200 bg-white shadow-lg">
+          <style>{`
+            .rdp-dab .rdp-month_caption { font-weight: 600; font-size: 0.875rem; }
+            .rdp-dab .rdp-day { border-radius: 0.375rem; }
+            .rdp-dab .rdp-day:hover { background: #fff7ed; }
+            .rdp-dab .rdp-selected .rdp-day_button,
+            .rdp-dab .rdp-day_button.rdp-selected { background: #ea580c !important; color: white !important; border-radius: 0.375rem; font-weight: 600; }
+            .rdp-dab .rdp-selected:hover .rdp-day_button { background: #c2410c !important; }
+            .rdp-dab .rdp-today:not(.rdp-selected) .rdp-day_button { color: #ea580c; font-weight: 700; }
+            .rdp-dab .rdp-disabled .rdp-day_button { color: #d4d4d8; cursor: not-allowed; }
+            .rdp-dab .rdp-disabled:hover { background: transparent; }
+            .rdp-dab .rdp-chevron { fill: #71717a; }
+            .rdp-dab { --rdp-accent-color: #ea580c; --rdp-accent-background-color: #fff7ed; }
+          `}</style>
 
-          {/* Quick time presets */}
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK_TIMES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => handleTimeChange(t.value)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                  selectedTime === t.value
-                    ? "bg-orange-600 text-white border-orange-600"
-                    : "bg-white text-zinc-600 border-zinc-200 hover:border-orange-300 hover:bg-orange-50"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className="p-2">
+            <DayPicker
+              mode="single"
+              selected={selectedDate}
+              onSelect={handleDaySelect}
+              disabled={minDate ? { before: minDate } : undefined}
+              className="rdp-dab"
+            />
           </div>
 
-          {/* Full time dropdown for other times */}
-          <select
-            value={selectedTime}
-            onChange={(e) => handleTimeChange(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-          >
-            {TIME_OPTIONS.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+          {/* Time selector inside popover */}
+          {includeTime && selectedDate && (
+            <div className="border-t border-zinc-100 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-zinc-500 shrink-0">Time:</label>
+                <select
+                  value={selectedTime}
+                  onChange={(e) => handleTimeChange(e.target.value)}
+                  className="flex h-8 flex-1 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                >
+                  {TIME_OPTIONS.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="h-8 rounded-md bg-orange-600 px-3 text-xs font-medium text-white hover:bg-orange-700 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -193,6 +207,7 @@ export function DatePicker({
   onChange,
   required = false,
   minDate,
+  placeholder,
 }: Omit<DateTimePickerProps, "includeTime">) {
   return (
     <DateTimePicker
@@ -201,6 +216,7 @@ export function DatePicker({
       required={required}
       includeTime={false}
       minDate={minDate}
+      placeholder={placeholder}
     />
   );
 }
