@@ -49,10 +49,9 @@ const authMiddleware = withAuth(
       if (!isStaff) {
         return NextResponse.redirect(new URL("/", req.url));
       }
-      // OPERATOR can only access dashboard, demand, events, and check-in
+      // OPERATOR can only access dashboard, events, and check-in
       if (role === "OPERATOR") {
         const allowed = pathname === "/admin" ||
-          pathname.startsWith("/admin/demand") ||
           pathname.startsWith("/admin/events") ||
           pathname.startsWith("/check-in");
         if (!allowed) {

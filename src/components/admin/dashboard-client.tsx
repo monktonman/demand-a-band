@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -38,6 +40,7 @@ import {
   Sparkles,
   DollarSign,
   ArrowUpRight,
+  X,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
@@ -77,6 +80,12 @@ interface DashboardProps {
     state: string;
     fanCount: number;
   }>;
+  genreDemand: Array<{
+    genre: string;
+    fanCount: number;
+    bandCount: number;
+    totalBandDemand: number;
+  }>;
 }
 
 const CHART_COLORS = [
@@ -84,17 +93,42 @@ const CHART_COLORS = [
   "#a3a3a3", "#d4d4d4",
 ];
 
+function buildPromoteUrl(band: { id: string; name: string; avgPrice: number; demandCount: number; dreamShowCount: number }) {
+  return `/admin/events/new?bandId=${band.id}&bandName=${encodeURIComponent(band.name)}&avgPrice=${Math.round(band.avgPrice)}&demandCount=${band.demandCount}&dreamShowCount=${band.dreamShowCount}`;
+}
+
 export function AdminDashboardClient({
   stats,
   topBands,
   dreamShows,
   cityDemand,
+  genreDemand,
 }: DashboardProps) {
+  const router = useRouter();
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+
+  // Genre chart data — top 12
+  const genreChartData = genreDemand.slice(0, 12).map((g) => ({
+    name: g.genre,
+    fans: g.fanCount,
+    bandDemand: g.totalBandDemand,
+    total: g.fanCount + g.totalBandDemand,
+  }));
+
+  // Bands filtered by selected genre
+  const filteredBands = selectedGenre
+    ? topBands.filter((b) => b.genres.includes(selectedGenre))
+    : [];
+
   // Data for top bands chart
   const topBandsChartData = topBands.slice(0, 10).map((band) => ({
     name: band.name.length > 15 ? band.name.slice(0, 15) + "..." : band.name,
+    fullName: band.name,
     fans: band.demandCount,
     dreamShows: band.dreamShowCount,
+    id: band.id,
+    avgPrice: band.avgPrice,
+    dreamShowCount: band.dreamShowCount,
   }));
 
   // Data for city demand chart
@@ -102,6 +136,17 @@ export function AdminDashboardClient({
     name: `${c.city}, ${c.state}`,
     fans: c.fanCount,
   }));
+
+  function handleGenreClick(genre: string) {
+    setSelectedGenre((prev) => (prev === genre ? null : genre));
+  }
+
+  function handleBandBarClick(_data: unknown, index: number) {
+    const band = topBands[index];
+    if (band) {
+      router.push(buildPromoteUrl(band));
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -202,22 +247,182 @@ export function AdminDashboardClient({
         </Card>
       </div>
 
+      {/* Genre Demand Section — Always visible above tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-orange-600" />
+            Genre Demand
+          </CardTitle>
+          <CardDescription>
+            Click a genre to see bands and create events
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {genreChartData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={genreChartData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={100}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip
+                    formatter={(value, name) => [
+                      value,
+                      name === "fans" ? "Direct Fan Demand" : "Band Demand",
+                    ]}
+                  />
+                  <Bar
+                    dataKey="total"
+                    name="Total Demand"
+                    radius={[0, 4, 4, 0]}
+                    cursor="pointer"
+                    onClick={(data) => data?.name && handleGenreClick(data.name as string)}
+                  >
+                    {genreChartData.map((entry, index) => (
+                      <Cell
+                        key={index}
+                        fill={entry.name === selectedGenre ? "#ea580c" : "#fdba74"}
+                        stroke={entry.name === selectedGenre ? "#c2410c" : "transparent"}
+                        strokeWidth={entry.name === selectedGenre ? 2 : 0}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+
+              {/* Genre Chips */}
+              <div className="flex flex-wrap gap-2">
+                {genreDemand.slice(0, 20).map((g) => (
+                  <button
+                    key={g.genre}
+                    onClick={() => handleGenreClick(g.genre)}
+                    className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                      selectedGenre === g.genre
+                        ? "bg-orange-600 text-white"
+                        : "bg-zinc-100 text-zinc-600 hover:bg-orange-100 hover:text-orange-700"
+                    }`}
+                  >
+                    {g.genre}
+                    <span className="ml-1 text-xs opacity-75">
+                      ({g.fanCount + g.totalBandDemand})
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex h-[200px] items-center justify-center text-zinc-400">
+              No genre demand data yet. Users need to complete onboarding.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Genre Drill-Down Panel */}
+      {selectedGenre && (
+        <Card className="border-orange-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="text-lg">
+                {selectedGenre}
+              </CardTitle>
+              <CardDescription>
+                {filteredBands.length} band{filteredBands.length !== 1 ? "s" : ""} with demand
+              </CardDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedGenre(null)}
+              className="text-zinc-400 hover:text-zinc-600"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {filteredBands.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Band</TableHead>
+                    <TableHead>Genres</TableHead>
+                    <TableHead className="text-right">Fans</TableHead>
+                    <TableHead className="text-right">Avg Price</TableHead>
+                    <TableHead className="text-right">Max Price</TableHead>
+                    <TableHead className="text-right">Dream Shows</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredBands.map((band) => (
+                    <TableRow key={band.id}>
+                      <TableCell className="font-medium">{band.name}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {band.genres.slice(0, 2).map((g) => (
+                            <Badge key={g} variant="outline" className="text-xs">
+                              {g}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{band.demandCount}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(band.avgPrice)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(band.maxPrice)}</TableCell>
+                      <TableCell className="text-right">
+                        {band.dreamShowCount > 0 ? (
+                          <Badge className="bg-amber-500">{band.dreamShowCount}</Badge>
+                        ) : (
+                          <span className="text-zinc-300">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link href={buildPromoteUrl(band)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+                          >
+                            <ArrowUpRight className="h-3 w-3" />
+                            Create Event
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="py-6 text-center text-zinc-400">
+                No bands with demand in this genre among the top 25.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Content Tabs */}
-      <Tabs defaultValue="demand" className="space-y-4">
+      <Tabs defaultValue="bands" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="demand">Demand Analytics</TabsTrigger>
+          <TabsTrigger value="bands">Top Bands</TabsTrigger>
           <TabsTrigger value="dreamshows">Dream Shows</TabsTrigger>
           <TabsTrigger value="cities">By City</TabsTrigger>
         </TabsList>
 
-        {/* Demand Analytics Tab */}
-        <TabsContent value="demand" className="space-y-4">
+        {/* Top Bands Tab */}
+        <TabsContent value="bands" className="space-y-4">
           {/* Top Bands Chart */}
           <Card>
             <CardHeader>
               <CardTitle>Most Demanded Bands</CardTitle>
               <CardDescription>
-                Number of fans who want to see each artist
+                Click a bar to start creating an event for that band
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -233,7 +438,13 @@ export function AdminDashboardClient({
                       tick={{ fontSize: 12 }}
                     />
                     <Tooltip />
-                    <Bar dataKey="fans" name="Fans" radius={[0, 4, 4, 0]}>
+                    <Bar
+                      dataKey="fans"
+                      name="Fans"
+                      radius={[0, 4, 4, 0]}
+                      cursor="pointer"
+                      onClick={(data, index) => handleBandBarClick(data, index)}
+                    >
                       {topBandsChartData.map((_, index) => (
                         <Cell
                           key={index}
@@ -307,12 +518,10 @@ export function AdminDashboardClient({
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Link
-                            href={`/admin/events/new?bandId=${band.id}&bandName=${encodeURIComponent(band.name)}&avgPrice=${Math.round(band.avgPrice)}&demandCount=${band.demandCount}&dreamShowCount=${band.dreamShowCount}`}
-                          >
+                          <Link href={buildPromoteUrl(band)}>
                             <Button size="sm" variant="outline" className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700">
                               <ArrowUpRight className="h-3 w-3" />
-                              Promote
+                              Create Event
                             </Button>
                           </Link>
                         </TableCell>

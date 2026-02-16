@@ -12,7 +12,7 @@ export function isAdmin(role: string | undefined): boolean {
 }
 
 // Paths an OPERATOR can access under /admin
-const OPERATOR_ALLOWED_PREFIXES = ["/admin/demand", "/admin/events"];
+const OPERATOR_ALLOWED_PREFIXES = ["/admin/events"];
 
 export function isOperatorAllowedPath(pathname: string): boolean {
   if (pathname === "/admin") return true;

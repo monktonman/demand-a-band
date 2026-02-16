@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  TrendingUp,
   Calendar,
   MapPin,
   Music2,
@@ -17,7 +16,6 @@ import {
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
-  { href: "/admin/demand", label: "Demand Analytics", icon: TrendingUp, adminOnly: false },
   { href: "/admin/events", label: "Events", icon: Calendar, adminOnly: false },
   { href: "/admin/venues", label: "Venues", icon: MapPin, adminOnly: true },
   { href: "/admin/bands", label: "Bands", icon: Music2, adminOnly: true },
