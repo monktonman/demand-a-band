@@ -73,6 +73,7 @@ function VerifyEmailContent() {
 
   // Success state — email verified
   if (success === "true") {
+    const isLoggedIn = !!session?.user?.id;
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
         <Card className="w-full max-w-md">
@@ -86,11 +87,19 @@ function VerifyEmailContent() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Link href="/onboarding">
-              <Button className="bg-orange-600 hover:bg-orange-700">
-                Continue to Setup
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/onboarding">
+                <Button className="bg-orange-600 hover:bg-orange-700">
+                  Continue to Setup
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/login?verified=true">
+                <Button className="bg-orange-600 hover:bg-orange-700">
+                  Sign In to Continue
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>

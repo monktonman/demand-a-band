@@ -21,6 +21,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/events";
   const registered = searchParams.get("registered");
+  const verified = searchParams.get("verified");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,6 +69,12 @@ function LoginForm() {
         {registered && (
           <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
             Account created successfully! Please sign in.
+          </div>
+        )}
+
+        {verified && (
+          <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
+            Email verified! Sign in to continue setting up your account.
           </div>
         )}
 
