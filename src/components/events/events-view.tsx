@@ -209,7 +209,7 @@ export function EventsView({
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Source tabs (only show if we have external events) */}
         {hasExternalEvents && (
-          <div className="flex items-center gap-1 rounded-lg border bg-zinc-50 p-1">
+          <div data-tour="events-tabs" className="flex items-center gap-1 rounded-lg border bg-zinc-50 p-1">
             <button
               onClick={() => setSource("all")}
               className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -283,7 +283,7 @@ export function EventsView({
 
       {/* Filter bar (show when viewing external events) */}
       {hasExternalEvents && showExternalCards && (
-        <div className="mb-6 space-y-3">
+        <div data-tour="events-filters" className="mb-6 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             {/* My Matches toggle (only show if user has preferences) */}
             {hasPreferences && matchCount > 0 && (

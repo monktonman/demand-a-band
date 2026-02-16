@@ -87,7 +87,7 @@ function OnboardingContent() {
           } else {
             setSpotifyImported(true);
             setSpotifyMessage(
-              "Spotify connected but we couldn't find any top artists in your account. Pick bands manually below!"
+              "Spotify connected but we couldn't find any top artists in your account. Pick artists manually below!"
             );
           }
         })

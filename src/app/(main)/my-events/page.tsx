@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { MyShowsTour } from "@/components/shared/my-shows-tour";
 
 export const dynamic = "force-dynamic";
 
@@ -142,8 +143,15 @@ export default async function MyEventsPage() {
         </p>
       </div>
 
+      {/* First-time user guidance */}
+      <MyShowsTour
+        userId={session.user.id}
+        hasPreferences={bandPrefs.length > 0 || genrePrefs.length > 0 || cityPrefs.length > 0}
+        hasPledges={pledges.length > 0}
+      />
+
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div data-tour="my-shows-stats" className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <Ticket className="h-8 w-8 text-orange-600" />
@@ -289,7 +297,7 @@ export default async function MyEventsPage() {
       )}
 
       {/* My Dream Shows */}
-      <div className="mb-10">
+      <div data-tour="my-shows-dream" className="mb-10">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
@@ -378,7 +386,7 @@ export default async function MyEventsPage() {
       </div>
 
       {/* My Preferences — consolidated from Dashboard */}
-      <div className="mb-10">
+      <div data-tour="my-shows-preferences" className="mb-10">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Sliders className="h-5 w-5 text-purple-600" />

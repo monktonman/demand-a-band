@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { EventsView } from "@/components/events/events-view";
+import { EventsTour } from "@/components/shared/events-tour";
 import { Music } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -138,6 +139,13 @@ export default async function EventsPage() {
             : "Browse proposed and upcoming shows. Commit your support to make them happen."}
         </p>
       </div>
+
+      {/* First-time user guidance */}
+      <EventsTour
+        userId={userId}
+        isLoggedIn={!!session}
+        hasPreferences={hasPreferences}
+      />
 
       {totalShows > 0 ? (
         <EventsView
