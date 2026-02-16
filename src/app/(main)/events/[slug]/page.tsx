@@ -24,10 +24,13 @@ export const dynamic = "force-dynamic";
 
 export default async function EventDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { slug } = await params;
+  const { from } = await searchParams;
 
   const session = await getServerSession(authOptions);
 
@@ -75,7 +78,7 @@ export default async function EventDetailPage({
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Back link */}
       <Link
-        href="/events"
+        href={from === "calendar" ? "/events?view=calendar" : "/events"}
         className="mb-6 inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-700"
       >
         <ArrowLeft className="h-4 w-4" />

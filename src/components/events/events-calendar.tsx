@@ -12,6 +12,7 @@ import {
   Clock,
   X,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,7 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedEvent, setSelectedEvent] = useState<ExternalCalendarEvent | null>(null);
+  const [selectedDabEvent, setSelectedDabEvent] = useState<CalendarEvent | null>(null);
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
@@ -242,13 +244,13 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                     <div className="mt-0.5 space-y-0.5">
                       {dayItems.map((item) =>
                         item.type === "dab" ? (
-                          <Link
+                          <button
                             key={item.event.id}
-                            href={`/events/${item.event.slug}`}
-                            className="group/item block"
+                            onClick={() => setSelectedDabEvent(item.event)}
+                            className="group/item block w-full text-left"
                           >
                             <div
-                              className={`rounded px-1.5 py-0.5 text-xs leading-tight transition-opacity hover:opacity-80 ${
+                              className={`rounded px-1.5 py-0.5 text-xs leading-tight transition-opacity hover:opacity-80 cursor-pointer ${
                                 item.event.status === "CONFIRMED"
                                   ? "bg-green-100 text-green-800"
                                   : item.event.status === "THRESHOLD_MET"
@@ -259,7 +261,7 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                               <span className="font-medium">{item.event.band.name}</span>
                               <span className="hidden lg:inline text-[10px] opacity-70"> · {item.event.venue.name}</span>
                             </div>
-                          </Link>
+                          </button>
                         ) : (
                           <button
                             key={item.event.id}
@@ -316,10 +318,10 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                 <div className="space-y-1.5">
                   {dayItems.map((item) =>
                     item.type === "dab" ? (
-                      <Link
+                      <button
                         key={item.event.id}
-                        href={`/events/${item.event.slug}`}
-                        className="block rounded-lg border bg-white p-3 transition-shadow hover:shadow-md"
+                        onClick={() => setSelectedDabEvent(item.event)}
+                        className="block w-full text-left rounded-lg border bg-white p-3 transition-shadow hover:shadow-md"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -350,7 +352,7 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                             />
                           </div>
                         </div>
-                      </Link>
+                      </button>
                     ) : (
                       <button
                         key={item.event.id}
@@ -388,7 +390,7 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
         })()}
       </div>
 
-      {/* Event detail dialog */}
+      {/* External event detail dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
         <DialogContent className="max-w-md">
           {selectedEvent && (
@@ -507,6 +509,131 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* DAB event preview dialog */}
+      <Dialog open={!!selectedDabEvent} onOpenChange={() => setSelectedDabEvent(null)}>
+        <DialogContent className="max-w-md">
+          {selectedDabEvent && (() => {
+            const pledgeCount = selectedDabEvent._count.pledges;
+            const progress = Math.min((pledgeCount / selectedDabEvent.minPledges) * 100, 100);
+            const remaining = Math.max(selectedDabEvent.minPledges - pledgeCount, 0);
+
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
+                        <Music2 className="h-6 w-6 text-orange-600" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-lg">
+                          {selectedDabEvent.band.name}
+                        </DialogTitle>
+                        <p className="text-sm text-zinc-500">
+                          {selectedDabEvent.band.genres.slice(0, 3).join(" / ") || "Music"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </DialogHeader>
+
+                <div className="space-y-4 pt-2">
+                  {/* Status badge */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className={EVENT_STATUS_COLORS[selectedDabEvent.status]}>
+                      {EVENT_STATUS_LABELS[selectedDabEvent.status]}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      DAB Show
+                    </Badge>
+                  </div>
+
+                  {/* Venue & Date */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm text-zinc-700">
+                      <MapPin className="h-4 w-4 text-zinc-400 shrink-0" />
+                      <span>
+                        {selectedDabEvent.venue.name}
+                        <span className="text-zinc-500">
+                          {" "}— {selectedDabEvent.venue.city}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-sm text-zinc-700">
+                      <Calendar className="h-4 w-4 text-zinc-400 shrink-0" />
+                      <span>{formatEventDate(selectedDabEvent.eventDate)}</span>
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <div className="rounded-lg bg-zinc-50 p-3">
+                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">
+                      Ticket Price
+                    </p>
+                    <p className="text-xl font-bold text-zinc-900">
+                      {formatCurrency(selectedDabEvent.ticketPrice)}
+                    </p>
+                  </div>
+
+                  {/* Pledge progress */}
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="flex items-center gap-1.5 text-zinc-600">
+                        <Users className="h-4 w-4" />
+                        {pledgeCount} / {selectedDabEvent.minPledges} pledges
+                      </span>
+                      <span className="font-semibold text-orange-600">
+                        {Math.round(progress)}%
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-zinc-500">
+                      {remaining > 0 ? (
+                        <>{remaining} more pledges needed to confirm</>
+                      ) : (
+                        <span className="text-green-600 font-medium">Minimum pledges reached!</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Genre tags */}
+                  {selectedDabEvent.band.genres.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedDabEvent.band.genres.map((genre) => (
+                        <Badge key={genre} variant="outline" className="text-xs">
+                          {genre}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 pt-2">
+                    <Link href={`/events/${selectedDabEvent.slug}?from=calendar`} className="flex-1">
+                      <Button className="w-full bg-orange-600 hover:bg-orange-700">
+                        View Details & Pledge
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedDabEvent(null)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

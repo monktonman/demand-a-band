@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { LayoutGrid, Calendar, Ticket, Globe, Sparkles, Filter, X } from "lucide-react";
 import { EventCard } from "@/components/events/event-card";
 import { ExternalEventCard, type ExternalEventData } from "@/components/events/external-event-card";
@@ -42,7 +43,28 @@ export function EventsView({
   hasPreferences = false,
   userGenres = [],
 }: EventsViewProps) {
-  const [view, setView] = useState<ViewMode>("cards");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Read view mode from URL params, default to "cards"
+  const viewParam = searchParams.get("view");
+  const view: ViewMode = viewParam === "calendar" ? "calendar" : "cards";
+
+  const setView = useCallback(
+    (newView: ViewMode) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newView === "cards") {
+        params.delete("view");
+      } else {
+        params.set("view", newView);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [searchParams, router, pathname]
+  );
+
   const [source, setSource] = useState<SourceTab>(
     externalEvents.length > 0 ? "all" : "dab"
   );
