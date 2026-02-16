@@ -2,9 +2,25 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Music2, ExternalLink } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Music2,
+  ExternalLink,
+  MapPin,
+  Calendar,
+  Clock,
+  X,
+  Sparkles,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EVENT_STATUS_COLORS, EVENT_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import type { EventStatus } from "@prisma/client";
@@ -26,12 +42,16 @@ interface ExternalCalendarEvent {
   id: string;
   artistName: string;
   venueName: string;
+  venueCity?: string;
+  venueState?: string;
   eventDate: string;
   eventTime: string | null;
   ticketUrl: string | null;
   priceMin: string | null;
   priceMax: string | null;
   genres: string[];
+  source?: string;
+  matchesPreferences?: boolean;
 }
 
 type CalendarItem =
@@ -51,6 +71,28 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
+function formatPrice(min: string | null, max: string | null): string {
+  if (!min && !max) return "Price TBA";
+  const minNum = min ? Number(min) : null;
+  const maxNum = max ? Number(max) : null;
+  if (minNum && maxNum && minNum !== maxNum) {
+    return `$${Math.round(minNum)}–$${Math.round(maxNum)}`;
+  }
+  if (minNum) return `From $${Math.round(minNum)}`;
+  if (maxNum) return `Up to $${Math.round(maxNum)}`;
+  return "Price TBA";
+}
+
+function formatEventDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -62,6 +104,7 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [selectedEvent, setSelectedEvent] = useState<ExternalCalendarEvent | null>(null);
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
@@ -218,28 +261,16 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                             </div>
                           </Link>
                         ) : (
-                          item.event.ticketUrl ? (
-                            <a
-                              key={item.event.id}
-                              href={item.event.ticketUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group/item block"
-                            >
-                              <div className="rounded px-1.5 py-0.5 text-xs leading-tight bg-blue-50 text-blue-800 transition-opacity hover:opacity-80">
-                                <span className="font-medium">{item.event.artistName}</span>
-                                <span className="hidden lg:inline text-[10px] opacity-70"> · {item.event.venueName}</span>
-                              </div>
-                            </a>
-                          ) : (
-                            <div
-                              key={item.event.id}
-                              className="rounded px-1.5 py-0.5 text-xs leading-tight bg-blue-50 text-blue-800"
-                            >
+                          <button
+                            key={item.event.id}
+                            onClick={() => setSelectedEvent(item.event)}
+                            className="group/item block w-full text-left"
+                          >
+                            <div className="rounded px-1.5 py-0.5 text-xs leading-tight bg-blue-50 text-blue-800 transition-opacity hover:opacity-80 cursor-pointer">
                               <span className="font-medium">{item.event.artistName}</span>
                               <span className="hidden lg:inline text-[10px] opacity-70"> · {item.event.venueName}</span>
                             </div>
-                          )
+                          </button>
                         )
                       )}
                     </div>
@@ -321,9 +352,10 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                         </div>
                       </Link>
                     ) : (
-                      <div
+                      <button
                         key={item.event.id}
-                        className="rounded-lg border border-blue-100 bg-blue-50/50 p-3"
+                        onClick={() => setSelectedEvent(item.event)}
+                        className="block w-full text-left rounded-lg border border-blue-100 bg-blue-50/50 p-3 transition-shadow hover:shadow-md"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -344,19 +376,9 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                                 ${Math.round(Number(item.event.priceMin))}+
                               </span>
                             )}
-                            {item.event.ticketUrl && (
-                              <a
-                                href={item.event.ticketUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="ml-1 inline-flex items-center gap-0.5 text-[10px] text-blue-600 hover:underline"
-                              >
-                                Tickets <ExternalLink className="h-2.5 w-2.5" />
-                              </a>
-                            )}
                           </div>
                         </div>
-                      </div>
+                      </button>
                     )
                   )}
                 </div>
@@ -365,6 +387,128 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
           });
         })()}
       </div>
+
+      {/* Event detail dialog */}
+      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+        <DialogContent className="max-w-md">
+          {selectedEvent && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                      <Music2 className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-lg">
+                        {selectedEvent.artistName}
+                      </DialogTitle>
+                      <p className="text-sm text-zinc-500">
+                        {selectedEvent.genres.slice(0, 3).join(" / ") || "Music"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2">
+                  <Badge className="bg-blue-100 text-blue-700 border border-blue-200">
+                    Confirmed
+                  </Badge>
+                  {selectedEvent.matchesPreferences && (
+                    <Badge className="bg-amber-100 text-amber-700 border border-amber-200">
+                      <Sparkles className="mr-0.5 h-3 w-3" />
+                      Matches your taste
+                    </Badge>
+                  )}
+                  {selectedEvent.source && (
+                    <Badge variant="outline" className="text-xs">
+                      via {selectedEvent.source === "ticketmaster" ? "Ticketmaster" : "SeatGeek"}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Details */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-zinc-700">
+                    <MapPin className="h-4 w-4 text-zinc-400 shrink-0" />
+                    <span>
+                      {selectedEvent.venueName}
+                      {(selectedEvent.venueCity || selectedEvent.venueState) && (
+                        <span className="text-zinc-500">
+                          {" "}— {[selectedEvent.venueCity, selectedEvent.venueState].filter(Boolean).join(", ")}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-sm text-zinc-700">
+                    <Calendar className="h-4 w-4 text-zinc-400 shrink-0" />
+                    <span>{formatEventDate(selectedEvent.eventDate)}</span>
+                  </div>
+
+                  {selectedEvent.eventTime && (
+                    <div className="flex items-center gap-3 text-sm text-zinc-700">
+                      <Clock className="h-4 w-4 text-zinc-400 shrink-0" />
+                      <span>{selectedEvent.eventTime}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Price */}
+                <div className="rounded-lg bg-zinc-50 p-3">
+                  <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">
+                    Ticket Price
+                  </p>
+                  <p className="text-xl font-bold text-zinc-900">
+                    {formatPrice(selectedEvent.priceMin, selectedEvent.priceMax)}
+                  </p>
+                </div>
+
+                {/* Genre tags */}
+                {selectedEvent.genres.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedEvent.genres.map((genre) => (
+                      <Badge key={genre} variant="outline" className="text-xs">
+                        {genre}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-2">
+                  {selectedEvent.ticketUrl ? (
+                    <a
+                      href={selectedEvent.ticketUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1"
+                    >
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Buy Tickets
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button className="flex-1" disabled>
+                      Tickets TBA
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedEvent(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

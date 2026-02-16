@@ -124,12 +124,16 @@ export function EventsView({
     id: e.id,
     artistName: e.artistName,
     venueName: e.venueName,
+    venueCity: e.venueCity,
+    venueState: e.venueState,
     eventDate: e.eventDate,
     eventTime: e.eventTime,
     ticketUrl: e.ticketUrl,
     priceMin: e.priceMin,
     priceMax: e.priceMax,
     genres: e.genres,
+    source: e.source,
+    matchesPreferences: e.matchesPreferences,
   }));
 
   const showDabCards = source === "all" || source === "dab";
