@@ -365,13 +365,21 @@ model ExternalEvent {
 // FEEDBACK (beta tester submissions)
 // ============================================
 
+enum FeedbackStatus {
+  NEW
+  REVIEWED
+  DONE
+  DISMISSED
+}
+
 model Feedback {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   userId    String?
   page      String // URL path where submitted
-  category  String   @default("general") // "bug", "feature", "general"
-  message   String   @db.Text
-  createdAt DateTime @default(now())
+  category  String         @default("general") // "bug", "feature", "general"
+  message   String         @db.Text
+  status    FeedbackStatus @default(NEW)
+  createdAt DateTime       @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 

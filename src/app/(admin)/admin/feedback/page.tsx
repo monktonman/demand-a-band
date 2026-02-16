@@ -18,6 +18,7 @@ export default async function AdminFeedbackPage() {
     page: f.page,
     category: f.category,
     message: f.message,
+    status: f.status,
     userName: f.user?.name || null,
     userEmail: f.user?.email || null,
     createdAt: f.createdAt.toISOString(),
