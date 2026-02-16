@@ -77,6 +77,9 @@ function PreferencesContent() {
   const [spotifyImported, setSpotifyImported] = useState(false);
   const [spotifyMessage, setSpotifyMessage] = useState("");
 
+  // Artist list filter
+  const [artistFilter, setArtistFilter] = useState("");
+
   // Band browser state
   const [showBandBrowser, setShowBandBrowser] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("popular");
@@ -560,7 +563,9 @@ function PreferencesContent() {
           </div>
 
           <p className="mb-3 text-sm text-zinc-500">
-            These help us recommend shows you&apos;ll love, even from artists you haven&apos;t discovered yet.
+            {selectedGenres.length === 0
+              ? "Select genres you enjoy — this helps us recommend shows you\u2019ll love, even from artists you haven\u2019t discovered yet."
+              : "These help us recommend shows you\u2019ll love, even from artists you haven\u2019t discovered yet."}
           </p>
 
           {/* Genre chips */}
@@ -579,10 +584,10 @@ function PreferencesContent() {
                     )
                   }
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all",
+                    "inline-flex items-center gap-1.5 rounded-full border-2 px-3.5 py-1.5 text-sm font-medium transition-all",
                     isSelected
-                      ? "bg-orange-600 text-white shadow-sm"
-                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      ? "border-orange-600 bg-orange-600 text-white shadow-sm"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
                   )}
                 >
                   {isSelected && <Check className="h-3.5 w-3.5" />}
@@ -592,11 +597,11 @@ function PreferencesContent() {
             })}
           </div>
 
-          {selectedGenres.length > 0 && (
-            <p className="mt-2 text-xs text-zinc-400">
-              {selectedGenres.length} genre{selectedGenres.length !== 1 ? "s" : ""} selected
-            </p>
-          )}
+          <p className="mt-2 text-xs text-zinc-400">
+            {selectedGenres.length > 0
+              ? `${selectedGenres.length} genre${selectedGenres.length !== 1 ? "s" : ""} selected`
+              : "Tap to select genres"}
+          </p>
         </section>
 
         {/* ═══ SECTION 2: YOUR ARTISTS ═══ */}
@@ -656,22 +661,71 @@ function PreferencesContent() {
 
           {/* Current artist selections */}
           {selectedBands.length > 0 ? (
-            <div className="mb-4 flex flex-wrap gap-1.5">
-              {selectedBands.map((band) => (
-                <Badge
-                  key={band.id}
-                  variant="secondary"
-                  className="gap-1 py-0.5 pl-2.5 pr-1 text-xs bg-orange-100 text-orange-700 hover:bg-orange-200"
-                >
-                  {band.name}
-                  <button
-                    onClick={() => removeBand(band.id)}
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-orange-300/50"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
-              ))}
+            <div className="mb-4">
+              {/* Filter input for long lists */}
+              {selectedBands.length > 10 && (
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                  <Input
+                    placeholder={`Filter ${selectedBands.length} artists...`}
+                    value={artistFilter}
+                    onChange={(e) => setArtistFilter(e.target.value)}
+                    className="pl-10 h-9 text-sm"
+                  />
+                  {artistFilter && (
+                    <button
+                      onClick={() => setArtistFilter("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Scrollable artist list */}
+              <div className="rounded-lg border border-zinc-200 divide-y divide-zinc-100 max-h-[400px] overflow-y-auto">
+                {selectedBands
+                  .filter((b) =>
+                    artistFilter
+                      ? b.name.toLowerCase().includes(artistFilter.toLowerCase())
+                      : true
+                  )
+                  .map((band) => (
+                    <div
+                      key={band.id}
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-zinc-50 group"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+                        <Music className="h-4 w-4 text-orange-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{band.name}</p>
+                        {band.genres.length > 0 && (
+                          <p className="text-xs text-zinc-400 truncate">
+                            {band.genres.slice(0, 2).join(" · ")}
+                            {band.genres.length > 2 && ` +${band.genres.length - 2}`}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeBand(band.id)}
+                        className="shrink-0 rounded-full p-1.5 text-zinc-300 hover:bg-red-50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title={`Remove ${band.name}`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                {artistFilter &&
+                  selectedBands.filter((b) =>
+                    b.name.toLowerCase().includes(artistFilter.toLowerCase())
+                  ).length === 0 && (
+                    <div className="px-3 py-6 text-center text-sm text-zinc-400">
+                      No artists match &ldquo;{artistFilter}&rdquo;
+                    </div>
+                  )}
+              </div>
             </div>
           ) : (
             <p className="mb-4 text-sm text-zinc-400">
