@@ -12,6 +12,7 @@ import { Calendar, CalendarRange, MapPin, Users, Music2 } from "lucide-react";
 import { formatCurrency, formatDate, formatDateRange } from "@/lib/utils";
 import { EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "@/lib/constants";
 import type { Band, Venue, EventStatus } from "@prisma/client";
+import type { UserPledgeInfo } from "@/components/events/events-view";
 
 interface EventCardProps {
   event: {
@@ -31,9 +32,10 @@ interface EventCardProps {
     ticketCount?: number;
     _count: { pledges: number };
   };
+  userPledge?: UserPledgeInfo;
 }
 
-export function EventCard({ event }: EventCardProps) {
+export function EventCard({ event, userPledge }: EventCardProps) {
   const pledgeCount = event.ticketCount ?? event._count.pledges;
   const progress = Math.min(
     (pledgeCount / event.minPledges) * 100,
@@ -63,8 +65,16 @@ export function EventCard({ event }: EventCardProps) {
                 </p>
               </div>
             </div>
-            <Badge className={EVENT_STATUS_COLORS[event.status] || "bg-zinc-500"}>
-              {EVENT_STATUS_LABELS[event.status] || event.status}
+            <Badge className={
+              event.status === "CONFIRMED" && userPledge
+                ? "bg-green-100 text-green-800"
+                : EVENT_STATUS_COLORS[event.status] || "bg-zinc-500"
+            }>
+              {event.status === "CONFIRMED"
+                ? userPledge
+                  ? "You're Going"
+                  : "Happening"
+                : EVENT_STATUS_LABELS[event.status] || event.status}
             </Badge>
           </div>
         </CardHeader>
@@ -123,7 +133,11 @@ export function EventCard({ event }: EventCardProps) {
             className="w-full bg-orange-600 hover:bg-orange-700"
             size="sm"
           >
-            Pledge Now
+            {event.status === "CONFIRMED" && !userPledge
+              ? "See If You Can Get In"
+              : userPledge
+                ? "View Details"
+                : "Pledge Now"}
           </Button>
         </CardFooter>
       </Card>

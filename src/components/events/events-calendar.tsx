@@ -196,18 +196,26 @@ export function EventsCalendar({ events, externalEvents = [], userPledges = [] }
       </div>
 
       {/* Legend */}
-      {hasExternalEvents && (
-        <div className="mb-3 flex items-center gap-4 text-xs text-zinc-500">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
-            DAB Shows
-          </span>
+      <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-zinc-500">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-orange-500" />
+          Open for Pledges
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+          Threshold Met
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+          Confirmed
+        </span>
+        {hasExternalEvents && (
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
             Upcoming Concerts
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Desktop calendar grid */}
       <div className="hidden md:block overflow-hidden rounded-lg border">
@@ -340,7 +348,11 @@ export function EventsCalendar({ events, externalEvents = [], userPledges = [] }
                           <div className="text-right">
                             <span className="text-sm font-bold">{formatCurrency(item.event.ticketPrice)}</span>
                             <Badge className={`ml-2 text-[10px] ${EVENT_STATUS_COLORS[item.event.status]}`}>
-                              {EVENT_STATUS_LABELS[item.event.status]}
+                              {item.event.status === "CONFIRMED"
+                                ? userPledges.find((p) => p.eventId === item.event.id)
+                                  ? "You're Going"
+                                  : "Happening"
+                                : EVENT_STATUS_LABELS[item.event.status]}
                             </Badge>
                           </div>
                         </div>
@@ -548,7 +560,11 @@ export function EventsCalendar({ events, externalEvents = [], userPledges = [] }
                   {/* Status badge */}
                   <div className="flex flex-wrap gap-2">
                     <Badge className={EVENT_STATUS_COLORS[selectedDabEvent.status]}>
-                      {EVENT_STATUS_LABELS[selectedDabEvent.status]}
+                      {selectedDabEvent.status === "CONFIRMED"
+                        ? userPledges.find((p) => p.eventId === selectedDabEvent.id)
+                          ? "You're Going"
+                          : "Happening"
+                        : EVENT_STATUS_LABELS[selectedDabEvent.status]}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
                       DAB Show

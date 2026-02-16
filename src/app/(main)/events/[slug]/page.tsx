@@ -103,7 +103,11 @@ export default async function EventDetailPage({
             <Badge
               className={EVENT_STATUS_COLORS[event.status] || "bg-zinc-500"}
             >
-              {EVENT_STATUS_LABELS[event.status] || event.status}
+              {event.status === "CONFIRMED"
+                ? userHasPledged
+                  ? "You're Going"
+                  : "Happening"
+                : EVENT_STATUS_LABELS[event.status] || event.status}
             </Badge>
             <h1 className="mt-3 text-3xl font-bold">{event.title}</h1>
             {event.description && (
