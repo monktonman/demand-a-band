@@ -58,6 +58,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.onboarded = user.onboarded;
+        token.lastVerified = Date.now();
       }
 
       // Handle session updates (e.g., after onboarding)
@@ -70,10 +71,44 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
+      // Re-validate against database periodically (every 5 minutes)
+      // This catches deleted users, role changes, and re-created accounts
+      const lastVerified = (token.lastVerified as number) || 0;
+      const fiveMinutes = 5 * 60 * 1000;
+      if (Date.now() - lastVerified > fiveMinutes) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { id: true, role: true, onboarded: true, email: true },
+          });
+
+          if (!dbUser) {
+            // User was deleted — invalidate the token
+            token.invalidated = true;
+            return token;
+          }
+
+          // Sync token with current database state
+          token.role = dbUser.role;
+          token.onboarded = dbUser.onboarded;
+          token.lastVerified = Date.now();
+        } catch {
+          // If DB check fails, keep existing token (don't break sessions)
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token) {
+        // If token was invalidated (user deleted), clear the session
+        if (token.invalidated) {
+          session.user.id = "";
+          session.user.role = "FAN";
+          session.user.onboarded = false;
+          return session;
+        }
+
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.onboarded = token.onboarded;

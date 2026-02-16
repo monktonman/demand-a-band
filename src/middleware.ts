@@ -33,6 +33,15 @@ const authMiddleware = withAuth(
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
 
+    // If token was invalidated (user deleted), redirect to login
+    if (token?.invalidated) {
+      const response = NextResponse.redirect(new URL("/login", req.url));
+      // Clear the session cookie so they get a fresh login
+      response.cookies.delete("next-auth.session-token");
+      response.cookies.delete("__Secure-next-auth.session-token");
+      return response;
+    }
+
     // Admin routes require ADMIN or OPERATOR role
     if (pathname.startsWith("/admin")) {
       const role = token?.role as string;
