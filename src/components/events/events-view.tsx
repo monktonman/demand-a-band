@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { LayoutGrid, Calendar, Ticket, Globe, Sparkles, Filter, X } from "lucide-react";
+import { LayoutGrid, Calendar, Ticket, Globe, Sparkles, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/events/event-card";
 import { ExternalEventCard, type ExternalEventData } from "@/components/events/external-event-card";
 import { EventsCalendar } from "@/components/events/events-calendar";
@@ -101,6 +102,21 @@ export function EventsView({
 
   const matchCount = externalEvents.filter((e) => e.matchesPreferences).length;
   const isFiltering = showMatchesOnly || selectedGenres.size > 0;
+
+  // Pagination for external events
+  const EVENTS_PER_PAGE = 12;
+  const [externalPage, setExternalPage] = useState(1);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setExternalPage(1);
+  }, [showMatchesOnly, selectedGenres, source]);
+
+  const totalExternalPages = Math.ceil(filteredExternalEvents.length / EVENTS_PER_PAGE);
+  const paginatedExternalEvents = filteredExternalEvents.slice(
+    (externalPage - 1) * EVENTS_PER_PAGE,
+    externalPage * EVENTS_PER_PAGE
+  );
 
   const toggleGenre = (genre: string) => {
     setSelectedGenres((prev) => {
@@ -353,7 +369,7 @@ export function EventsView({
                 </h3>
               )}
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredExternalEvents.map((event) => (
+                {paginatedExternalEvents.map((event) => (
                   <ExternalEventCard
                     key={event.id}
                     event={event}
@@ -361,6 +377,85 @@ export function EventsView({
                   />
                 ))}
               </div>
+
+              {/* Pagination controls */}
+              {totalExternalPages > 1 && (
+                <div className="mt-8 flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setExternalPage((p) => Math.max(1, p - 1));
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    disabled={externalPage === 1}
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Prev
+                  </Button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalExternalPages }, (_, i) => i + 1)
+                      .filter((page) => {
+                        // Show first, last, current, and neighbors
+                        if (page === 1 || page === totalExternalPages) return true;
+                        if (Math.abs(page - externalPage) <= 1) return true;
+                        return false;
+                      })
+                      .reduce<(number | "ellipsis")[]>((acc, page, idx, arr) => {
+                        if (idx > 0 && page - (arr[idx - 1] as number) > 1) {
+                          acc.push("ellipsis");
+                        }
+                        acc.push(page);
+                        return acc;
+                      }, [])
+                      .map((item, idx) =>
+                        item === "ellipsis" ? (
+                          <span key={`ellipsis-${idx}`} className="px-1 text-zinc-400">
+                            &hellip;
+                          </span>
+                        ) : (
+                          <button
+                            key={item}
+                            onClick={() => {
+                              setExternalPage(item);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className={`h-8 w-8 rounded-md text-sm font-medium transition-colors ${
+                              externalPage === item
+                                ? "bg-orange-600 text-white shadow-sm"
+                                : "text-zinc-600 hover:bg-zinc-100"
+                            }`}
+                          >
+                            {item}
+                          </button>
+                        )
+                      )}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setExternalPage((p) => Math.min(totalExternalPages, p + 1));
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    disabled={externalPage === totalExternalPages}
+                    className="gap-1"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Page info */}
+              {totalExternalPages > 1 && (
+                <p className="mt-3 text-center text-xs text-zinc-400">
+                  Showing {(externalPage - 1) * EVENTS_PER_PAGE + 1}–{Math.min(externalPage * EVENTS_PER_PAGE, filteredExternalEvents.length)} of {filteredExternalEvents.length} concerts
+                </p>
+              )}
             </div>
           )}
 
