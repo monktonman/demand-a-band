@@ -18,7 +18,6 @@ import {
   Heart,
   LogOut,
   LayoutDashboard,
-  Construction,
 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import type { UserRole } from "@prisma/client";
@@ -67,18 +66,12 @@ export function UserMenu({ user }: UserMenuProps) {
           <Link href="/preferences" className="cursor-pointer">
             <Heart className="mr-2 h-4 w-4" />
             Preferences
-            <span className="ml-auto">
-              <Construction className="h-3 w-3 text-amber-500" />
-            </span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings" className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             Settings
-            <span className="ml-auto">
-              <Construction className="h-3 w-3 text-amber-500" />
-            </span>
           </Link>
         </DropdownMenuItem>
         {(user.role === "ADMIN" || user.role === "OPERATOR") && (

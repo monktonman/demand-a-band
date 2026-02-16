@@ -61,13 +61,16 @@ export const authOptions: NextAuthOptions = {
         token.lastVerified = Date.now();
       }
 
-      // Handle session updates (e.g., after onboarding)
+      // Handle session updates (e.g., after onboarding or profile changes)
       if (trigger === "update" && session) {
         if (session.onboarded !== undefined) {
           token.onboarded = session.onboarded;
         }
         if (session.role !== undefined) {
           token.role = session.role;
+        }
+        if (session.name !== undefined) {
+          token.name = session.name;
         }
       }
 
@@ -79,7 +82,7 @@ export const authOptions: NextAuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { id: true, role: true, onboarded: true, email: true },
+            select: { id: true, role: true, onboarded: true, email: true, name: true },
           });
 
           if (!dbUser) {
@@ -91,6 +94,7 @@ export const authOptions: NextAuthOptions = {
           // Sync token with current database state
           token.role = dbUser.role;
           token.onboarded = dbUser.onboarded;
+          token.name = dbUser.name;
           token.lastVerified = Date.now();
         } catch {
           // If DB check fails, keep existing token (don't break sessions)
