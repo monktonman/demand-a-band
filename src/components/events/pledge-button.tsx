@@ -111,7 +111,14 @@ function PledgeForm({
           <PaymentElement
             onChange={(e) => setCardReady(e.complete)}
             options={{
-              layout: "tabs",
+              layout: "accordion",
+              defaultValues: {
+                billingDetails: {
+                  address: {
+                    country: "US",
+                  },
+                },
+              },
             }}
           />
         </div>
@@ -399,7 +406,7 @@ export function PledgeButton({
           Pledge {formatCurrencyDecimal(totalPerTicket)}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         {success ? (
           <div className="py-8 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
