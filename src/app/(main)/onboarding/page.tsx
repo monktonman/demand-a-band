@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Music, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DEFAULT_TICKET_PRICE } from "@/lib/constants";
+import { StepGenres } from "@/components/onboarding/step-genres";
 import { StepBands } from "@/components/onboarding/step-bands";
 import { StepLocation } from "@/components/onboarding/step-location";
 import { StepComplete } from "@/components/onboarding/step-complete";
@@ -26,7 +27,14 @@ export interface CityPreference {
 }
 
 const STEPS = [
-  { title: "Pick Your Artists & Genres", description: "What music do you want to see live?" },
+  {
+    title: "Pick Your Genres",
+    description: "What kind of music do you want to see live?",
+  },
+  {
+    title: "Choose Artists",
+    description: "Pick specific artists you'd love to see — or skip for now",
+  },
   {
     title: "Your Location",
     description: "Where do you want to see shows?",
@@ -68,13 +76,20 @@ function OnboardingContent() {
               const existingIds = new Set(prev.map((b) => b.id));
               const newBands: SelectedBand[] = data.bands
                 .filter((b: { id: string }) => !existingIds.has(b.id))
-                .map((b: { id: string; name: string; genres: string[]; imageUrl: string | null }) => ({
-                  id: b.id,
-                  name: b.name,
-                  genres: b.genres,
-                  imageUrl: b.imageUrl,
-                  source: "spotify" as const,
-                }));
+                .map(
+                  (b: {
+                    id: string;
+                    name: string;
+                    genres: string[];
+                    imageUrl: string | null;
+                  }) => ({
+                    id: b.id,
+                    name: b.name,
+                    genres: b.genres,
+                    imageUrl: b.imageUrl,
+                    source: "spotify" as const,
+                  })
+                );
               return [...prev, ...newBands];
             });
             setSpotifyImported(true);
@@ -84,6 +99,8 @@ function OnboardingContent() {
                 ? `Imported ${data.bands.length} artist${data.bands.length !== 1 ? "s" : ""} from Spotify! (${newNum} new to our catalog)`
                 : `Imported ${data.bands.length} artist${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
             );
+            // Jump to artists step if Spotify returned with artists
+            setCurrentStep(1);
           } else {
             setSpotifyImported(true);
             setSpotifyMessage(
@@ -98,9 +115,13 @@ function OnboardingContent() {
           );
         });
     } else if (spotifyStatus === "denied") {
-      setSpotifyMessage("Spotify access was denied. You can still pick artists manually.");
+      setSpotifyMessage(
+        "Spotify access was denied. You can still pick artists manually."
+      );
     } else if (spotifyStatus === "error") {
-      setSpotifyMessage("Something went wrong with Spotify. You can still pick artists manually.");
+      setSpotifyMessage(
+        "Something went wrong with Spotify. You can still pick artists manually."
+      );
     }
 
     // Clean URL params
@@ -115,6 +136,11 @@ function OnboardingContent() {
 
   const handleBack = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  // Skip artists step — go directly to location
+  const handleSkipArtists = () => {
+    setCurrentStep(2); // Jump to location step
   };
 
   const handleSpotifyConnect = async () => {
@@ -176,10 +202,12 @@ function OnboardingContent() {
   };
 
   return (
-    <div className={cn(
-      "mx-auto px-4 py-8 sm:py-12",
-      currentStep === 0 ? "max-w-4xl" : "max-w-2xl"
-    )}>
+    <div
+      className={cn(
+        "mx-auto px-4 py-8 sm:py-12",
+        currentStep <= 1 ? "max-w-4xl" : "max-w-2xl"
+      )}
+    >
       {/* Header */}
       <div className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
@@ -196,9 +224,24 @@ function OnboardingContent() {
           {STEPS.map((step, i) => (
             <span
               key={i}
-              className={i <= currentStep ? "text-orange-600 font-medium" : ""}
+              className={cn(
+                i <= currentStep ? "text-orange-600 font-medium" : "",
+                "hidden sm:inline"
+              )}
             >
-              {i + 1}. {step.title}
+              {step.title}
+            </span>
+          ))}
+          {/* Mobile: just show step numbers */}
+          {STEPS.map((_, i) => (
+            <span
+              key={`mobile-${i}`}
+              className={cn(
+                "sm:hidden",
+                i <= currentStep ? "text-orange-600 font-medium" : ""
+              )}
+            >
+              Step {i + 1}
             </span>
           ))}
         </div>
@@ -206,12 +249,14 @@ function OnboardingContent() {
 
       {/* Spotify message */}
       {spotifyMessage && (
-        <div className={cn(
-          "mb-4 rounded-md p-3 text-sm",
-          spotifyImported
-            ? "bg-green-50 text-green-700"
-            : "bg-amber-50 text-amber-700"
-        )}>
+        <div
+          className={cn(
+            "mb-4 rounded-md p-3 text-sm",
+            spotifyImported
+              ? "bg-green-50 text-green-700"
+              : "bg-amber-50 text-amber-700"
+          )}
+        >
           {spotifyMessage}
         </div>
       )}
@@ -225,22 +270,33 @@ function OnboardingContent() {
 
       {/* Steps */}
       {currentStep === 0 && (
+        <StepGenres
+          selectedGenres={selectedGenres}
+          onToggleGenre={(genre) =>
+            setSelectedGenres((prev) =>
+              prev.includes(genre)
+                ? prev.filter((g) => g !== genre)
+                : [...prev, genre]
+            )
+          }
+          onNext={handleNext}
+        />
+      )}
+
+      {currentStep === 1 && (
         <StepBands
           selectedBands={selectedBands}
           setSelectedBands={setSelectedBands}
           selectedGenres={selectedGenres}
-          onToggleGenre={(genre) =>
-            setSelectedGenres((prev) =>
-              prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
-            )
-          }
           onNext={handleNext}
+          onBack={handleBack}
+          onSkip={handleSkipArtists}
           spotifyImported={spotifyImported}
           onSpotifyConnect={handleSpotifyConnect}
         />
       )}
 
-      {currentStep === 1 && (
+      {currentStep === 2 && (
         <StepLocation
           cityPreferences={cityPreferences}
           setCityPreferences={setCityPreferences}
@@ -250,7 +306,7 @@ function OnboardingContent() {
         />
       )}
 
-      {currentStep === 2 && (
+      {currentStep === 3 && (
         <StepComplete
           bandCount={selectedBands.length}
           genreCount={selectedGenres.length}

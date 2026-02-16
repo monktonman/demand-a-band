@@ -4,11 +4,16 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, X, ChevronRight, Loader2, Music, Sliders } from "lucide-react";
-import { GENRES } from "@/lib/constants";
+import {
+  Search,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Loader2,
+  Music,
+  SkipForward,
+} from "lucide-react";
 import { BandSelectionCard } from "./band-selection-card";
-import { GenreChips } from "./genre-chips";
-import { GenrePreferenceSelector } from "./genre-preference-selector";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import type { SelectedBand } from "@/app/(main)/onboarding/page";
 
@@ -16,8 +21,9 @@ interface StepBandsProps {
   selectedBands: SelectedBand[];
   setSelectedBands: React.Dispatch<React.SetStateAction<SelectedBand[]>>;
   selectedGenres: string[];
-  onToggleGenre: (genre: string) => void;
   onNext: () => void;
+  onBack: () => void;
+  onSkip: () => void;
   spotifyImported?: boolean;
   onSpotifyConnect?: () => void;
 }
@@ -31,30 +37,31 @@ interface BandResult {
   popularity: number;
 }
 
-type TabId = "popular" | "genres" | "search" | "spotify";
+type TabId = "recommended" | "popular" | "search" | "spotify";
 
 export function StepBands({
   selectedBands,
   setSelectedBands,
   selectedGenres,
-  onToggleGenre,
   onNext,
+  onBack,
+  onSkip,
   spotifyImported,
   onSpotifyConnect,
 }: StepBandsProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("popular");
+  const [activeTab, setActiveTab] = useState<TabId>("recommended");
+
+  // Recommended tab state (pre-filtered by user's selected genres)
+  const [recommendedBands, setRecommendedBands] = useState<BandResult[]>([]);
+  const [isLoadingRecommended, setIsLoadingRecommended] = useState(true);
 
   // Popular tab state
   const [popularBands, setPopularBands] = useState<BandResult[]>([]);
-  const [isLoadingPopular, setIsLoadingPopular] = useState(true);
+  const [isLoadingPopular, setIsLoadingPopular] = useState(false);
+  const [popularLoaded, setPopularLoaded] = useState(false);
   const [popularPage, setPopularPage] = useState(1);
   const [hasMorePopular, setHasMorePopular] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-  // Genre tab state
-  const [activeGenre, setActiveGenre] = useState<string | null>(null);
-  const [genreBands, setGenreBands] = useState<BandResult[]>([]);
-  const [isLoadingGenre, setIsLoadingGenre] = useState(false);
 
   // Search tab state
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,9 +76,36 @@ export function StepBands({
   // Show Spotify button only if env var is set
   const showSpotify = process.env.NEXT_PUBLIC_SPOTIFY_CONFIGURED === "true";
 
-  // Load popular bands
+  // Load recommended bands based on user's selected genres
   useEffect(() => {
+    async function loadRecommended() {
+      setIsLoadingRecommended(true);
+      try {
+        // Fetch artists matching the user's selected genres
+        const genreParams = selectedGenres
+          .map((g) => `genre=${encodeURIComponent(g)}`)
+          .join("&");
+        const url = selectedGenres.length > 0
+          ? `/api/bands?limit=48&sortBy=popularity&${genreParams}`
+          : `/api/bands?limit=48&sortBy=popularity`;
+        const res = await fetch(url);
+        const data = await res.json();
+        setRecommendedBands(data.bands || []);
+      } catch (error) {
+        console.error("Failed to load recommended bands:", error);
+      } finally {
+        setIsLoadingRecommended(false);
+      }
+    }
+    loadRecommended();
+  }, [selectedGenres]);
+
+  // Load popular bands (lazy — only when tab is selected)
+  useEffect(() => {
+    if (activeTab !== "popular" || popularLoaded) return;
+
     async function loadPopular() {
+      setIsLoadingPopular(true);
       try {
         const res = await fetch("/api/bands?limit=48&sortBy=popularity");
         const data = await res.json();
@@ -81,17 +115,20 @@ export function StepBands({
         console.error("Failed to load bands:", error);
       } finally {
         setIsLoadingPopular(false);
+        setPopularLoaded(true);
       }
     }
     loadPopular();
-  }, []);
+  }, [activeTab, popularLoaded]);
 
   // Load more popular bands
   const loadMorePopular = async () => {
     setIsLoadingMore(true);
     try {
       const nextPage = popularPage + 1;
-      const res = await fetch(`/api/bands?limit=48&sortBy=popularity&page=${nextPage}`);
+      const res = await fetch(
+        `/api/bands?limit=48&sortBy=popularity&page=${nextPage}`
+      );
       const data = await res.json();
       setPopularBands((prev) => [...prev, ...(data.bands || [])]);
       setPopularPage(nextPage);
@@ -102,30 +139,6 @@ export function StepBands({
       setIsLoadingMore(false);
     }
   };
-
-  // Load bands by genre
-  useEffect(() => {
-    if (!activeGenre) {
-      setGenreBands([]);
-      return;
-    }
-
-    async function loadGenre() {
-      setIsLoadingGenre(true);
-      try {
-        const res = await fetch(
-          `/api/bands?limit=100&sortBy=popularity&genre=${encodeURIComponent(activeGenre!)}`
-        );
-        const data = await res.json();
-        setGenreBands(data.bands || []);
-      } catch (error) {
-        console.error("Failed to load genre bands:", error);
-      } finally {
-        setIsLoadingGenre(false);
-      }
-    }
-    loadGenre();
-  }, [activeGenre]);
 
   // Load user's Spotify artists when tab is selected
   useEffect(() => {
@@ -203,10 +216,10 @@ export function StepBands({
   // Tab content: get the bands to display in the grid
   const getDisplayBands = (): BandResult[] => {
     switch (activeTab) {
+      case "recommended":
+        return recommendedBands;
       case "popular":
         return popularBands;
-      case "genres":
-        return genreBands;
       case "search":
         return searchResults;
       case "spotify":
@@ -217,18 +230,20 @@ export function StepBands({
   };
 
   const isLoading =
+    (activeTab === "recommended" && isLoadingRecommended) ||
     (activeTab === "popular" && isLoadingPopular) ||
-    (activeTab === "genres" && isLoadingGenre) ||
     (activeTab === "search" && isSearching) ||
     (activeTab === "spotify" && isLoadingSpotify);
 
   const displayBands = getDisplayBands();
 
-  const tabs: { id: TabId; label: string; icon?: string }[] = [
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "recommended", label: "For You" },
     { id: "popular", label: "Popular" },
-    { id: "genres", label: "By Genre" },
     { id: "search", label: "Search" },
-    ...(showSpotify ? [{ id: "spotify" as TabId, label: "My Spotify" }] : []),
+    ...(showSpotify
+      ? [{ id: "spotify" as TabId, label: "My Spotify" }]
+      : []),
   ];
 
   return (
@@ -236,15 +251,7 @@ export function StepBands({
       {/* Guided tour for first-time users */}
       <OnboardingTour step="bands" />
 
-      {/* ── Concept explainer ── */}
-      <div data-tour="onboarding-concept" className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4">
-        <p className="text-sm text-zinc-700 leading-relaxed">
-          <span className="font-semibold text-orange-700">How it works:</span>{" "}
-          Tell us your favorite artists and genres. When enough fans demand the same artist, we&apos;ll work to book the show in Baltimore. Your picks directly influence which artists come to town!
-        </p>
-      </div>
-
-      {/* ── Spotify quick start (prominent, at the top) ── */}
+      {/* Spotify quick start (prominent, at the top) */}
       {showSpotify && !spotifyImported && onSpotifyConnect && (
         <button
           type="button"
@@ -252,14 +259,21 @@ export function StepBands({
           className="flex w-full items-center gap-4 rounded-xl border-2 border-green-300 bg-gradient-to-r from-green-50 to-emerald-50 p-4 text-left transition-all hover:border-green-400 hover:shadow-lg"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-500 shadow-md">
-            <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <svg
+              className="h-6 w-6 text-white"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
               <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
             </svg>
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-green-900">Quick Start with Spotify</p>
+            <p className="font-semibold text-green-900">
+              Quick Start with Spotify
+            </p>
             <p className="text-sm text-green-700">
-              Import your favorite artists automatically from your listening history
+              Import your favorite artists automatically from your listening
+              history
             </p>
           </div>
           <ChevronRight className="h-5 w-5 text-green-400" />
@@ -270,12 +284,18 @@ export function StepBands({
       {spotifyImported && (
         <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500">
-            <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <svg
+              className="h-4 w-4 text-white"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
               <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
             </svg>
           </div>
           <div>
-            <p className="text-sm font-medium text-green-800">Spotify Connected</p>
+            <p className="text-sm font-medium text-green-800">
+              Spotify Connected
+            </p>
             <p className="text-xs text-green-600">
               Artists imported from your listening history
             </p>
@@ -283,101 +303,66 @@ export function StepBands({
         </div>
       )}
 
-      {/* ── Current selections summary ── */}
-      <div data-tour="onboarding-selections" className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-zinc-700">Your Selections</h3>
-          <span className="text-xs text-zinc-400">
-            {selectedBands.length < 3
-              ? `Select at least ${3 - selectedBands.length} more artist${3 - selectedBands.length !== 1 ? "s" : ""}`
-              : "Ready to continue!"}
-          </span>
+      {/* Genre context — show what genres the user picked */}
+      {selectedGenres.length > 0 && (
+        <div className="rounded-lg border border-orange-100 bg-orange-50/50 p-3">
+          <p className="text-xs font-medium text-zinc-500 mb-1.5">
+            Showing artists based on your genres:
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {selectedGenres.map((genre) => (
+              <Badge
+                key={genre}
+                variant="secondary"
+                className="bg-orange-100 text-orange-700 text-xs py-0.5"
+              >
+                {genre}
+              </Badge>
+            ))}
+          </div>
         </div>
+      )}
 
-        {/* Genre selections */}
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <Sliders className="h-3.5 w-3.5 text-zinc-500" />
+      {/* Current artist selections */}
+      {selectedBands.length > 0 && (
+        <div
+          data-tour="onboarding-selections"
+          className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+        >
+          <div className="mb-2 flex items-center gap-1.5">
+            <Music className="h-3.5 w-3.5 text-orange-600" />
             <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Genres
-              {selectedGenres.length > 0 && (
-                <span className="ml-1 text-orange-600">({selectedGenres.length})</span>
-              )}
+              Selected Artists
+              <span className="ml-1 text-orange-600">
+                ({selectedBands.length})
+              </span>
             </h4>
           </div>
-          {selectedGenres.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedGenres.map((genre) => (
-                <Badge
-                  key={genre}
-                  variant="secondary"
-                  className="gap-1 py-0.5 pl-2.5 pr-1 text-xs bg-purple-100 text-purple-700 hover:bg-purple-200"
+          <div className="flex flex-wrap gap-1.5">
+            {selectedBands.map((band) => (
+              <Badge
+                key={band.id}
+                variant="secondary"
+                className="gap-1 bg-orange-100 py-0.5 pl-2.5 pr-1 text-xs text-orange-700 hover:bg-orange-200"
+              >
+                {band.name}
+                <button
+                  onClick={() => removeBand(band.id)}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-orange-300/50"
                 >
-                  {genre}
-                  <button
-                    onClick={() => onToggleGenre(genre)}
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-purple-300/50"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-zinc-400">No genres yet — pick some below (optional)</p>
-          )}
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-zinc-200" />
-
-        {/* Band selections */}
-        <div>
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <Music className="h-3.5 w-3.5 text-zinc-500" />
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Artists
-              {selectedBands.length > 0 && (
-                <span className="ml-1 text-orange-600">({selectedBands.length})</span>
-              )}
-            </h4>
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </Badge>
+            ))}
           </div>
-          {selectedBands.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedBands.map((band) => (
-                <Badge
-                  key={band.id}
-                  variant="secondary"
-                  className="gap-1 bg-orange-100 py-0.5 pl-2.5 pr-1 text-xs text-orange-700 hover:bg-orange-200"
-                >
-                  {band.name}
-                  <button
-                    onClick={() => removeBand(band.id)}
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-orange-300/50"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-zinc-400">
-              Browse below or connect Spotify to get started
-            </p>
-          )}
         </div>
-      </div>
-
-      {/* ── Genre preference picker ── */}
-      <div data-tour="onboarding-genres">
-        <GenrePreferenceSelector
-          selectedGenres={selectedGenres}
-          onToggle={onToggleGenre}
-        />
-      </div>
+      )}
 
       {/* Tab bar */}
-      <div data-tour="onboarding-browse" className="flex gap-1 rounded-lg bg-zinc-100 p-1">
+      <div
+        data-tour="onboarding-browse"
+        className="flex gap-1 rounded-lg bg-zinc-100 p-1"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -393,15 +378,6 @@ export function StepBands({
           </button>
         ))}
       </div>
-
-      {/* Genre chips (only on genre tab) */}
-      {activeTab === "genres" && (
-        <GenreChips
-          genres={GENRES}
-          activeGenre={activeGenre}
-          onSelect={setActiveGenre}
-        />
-      )}
 
       {/* Search input (only on search tab) */}
       {activeTab === "search" && (
@@ -431,8 +407,6 @@ export function StepBands({
           <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
             {activeTab === "search" && searchQuery.length < 2 ? (
               <p>Type at least 2 characters to search</p>
-            ) : activeTab === "genres" && !activeGenre ? (
-              <p>Select a genre above to browse artists</p>
             ) : activeTab === "spotify" && !spotifyLoaded ? (
               <p>Loading your Spotify artists...</p>
             ) : activeTab === "spotify" && spotifyLoaded ? (
@@ -490,21 +464,36 @@ export function StepBands({
         )}
       </div>
 
-      {/* Next button */}
+      {/* Navigation */}
       <div className="flex items-center justify-between border-t border-zinc-100 pt-4">
-        <p className="text-sm text-zinc-400">
-          {selectedBands.length < 3
-            ? `Select at least ${3 - selectedBands.length} more artist${3 - selectedBands.length !== 1 ? "s" : ""}`
-            : `${selectedGenres.length > 0 ? `${selectedGenres.length} genre${selectedGenres.length !== 1 ? "s" : ""}, ` : ""}${selectedBands.length} artist${selectedBands.length !== 1 ? "s" : ""} selected`}
-        </p>
-        <Button
-          onClick={onNext}
-          disabled={selectedBands.length < 3}
-          className="bg-orange-600 hover:bg-orange-700"
-        >
-          Continue
-          <ChevronRight className="ml-1 h-4 w-4" />
+        <Button variant="outline" onClick={onBack}>
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back
         </Button>
+
+        <div className="flex items-center gap-2">
+          {/* Skip option */}
+          <Button
+            variant="ghost"
+            onClick={onSkip}
+            className="text-zinc-400 hover:text-zinc-600"
+          >
+            <SkipForward className="mr-1 h-4 w-4" />
+            Skip for now
+          </Button>
+
+          {/* Continue with selections */}
+          {selectedBands.length > 0 && (
+            <Button
+              onClick={onNext}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              Continue ({selectedBands.length} artist
+              {selectedBands.length !== 1 ? "s" : ""})
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

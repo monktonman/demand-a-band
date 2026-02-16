@@ -2,34 +2,37 @@
 
 import { GuidedTour, type TourStep } from "./guided-tour";
 
-const STEP_BANDS_TOUR: TourStep[] = [
+const STEP_GENRES_TOUR: TourStep[] = [
   {
     target: "onboarding-concept",
     title: "How Demand A Band Works",
     description:
-      "Fans like you vote for the artists they want to see live. When enough people pledge, we book the show! Your preferences help us know which artists to bring to Baltimore.",
+      "Fans like you vote for the artists they want to see live. When enough people pledge, we book the show! Start by telling us what genres you love.",
     placement: "bottom",
   },
   {
     target: "onboarding-genres",
     title: "Pick Your Genres",
     description:
-      "Select the genres you love — rock, hip-hop, indie, jazz, whatever you're into. We'll use these to recommend shows and match you with events.",
+      "Tap the genres you enjoy — rock, hip-hop, indie, jazz, whatever you're into. We'll use these to recommend shows and match you with events, even from artists you haven't discovered yet.",
     placement: "bottom",
+  },
+];
+
+const STEP_BANDS_TOUR: TourStep[] = [
+  {
+    target: "onboarding-browse",
+    title: "Find Artists",
+    description:
+      "The \"For You\" tab shows artists matching your genres. You can also browse popular artists, search by name, or connect Spotify. Tap any artist card to select them.",
+    placement: "top",
   },
   {
     target: "onboarding-selections",
     title: "Your Selections",
     description:
-      "Your chosen genres and artists appear here. You need at least 3 artists to continue. The more you pick, the better we can match you!",
+      "Your chosen artists appear here. This step is optional — you can skip it and come back later from your settings.",
     placement: "bottom",
-  },
-  {
-    target: "onboarding-browse",
-    title: "Find Artists",
-    description:
-      "Browse popular artists, search by name, filter by genre, or connect Spotify to auto-import from your listening history. Tap any artist card to select them.",
-    placement: "top",
   },
 ];
 
@@ -58,18 +61,18 @@ const STEP_LOCATION_TOUR: TourStep[] = [
 ];
 
 interface OnboardingTourProps {
-  step: "bands" | "location";
+  step: "genres" | "bands" | "location";
 }
 
 export function OnboardingTour({ step }: OnboardingTourProps) {
-  const steps = step === "bands" ? STEP_BANDS_TOUR : STEP_LOCATION_TOUR;
+  const stepsMap = {
+    genres: STEP_GENRES_TOUR,
+    bands: STEP_BANDS_TOUR,
+    location: STEP_LOCATION_TOUR,
+  };
+
+  const steps = stepsMap[step];
   const tourId = `onboarding-${step}`;
 
-  return (
-    <GuidedTour
-      tourId={tourId}
-      steps={steps}
-      delay={600}
-    />
-  );
+  return <GuidedTour tourId={tourId} steps={steps} delay={600} />;
 }

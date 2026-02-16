@@ -12,8 +12,8 @@ export async function GET(req: Request) {
   // Search
   const search = searchParams.get("search")?.trim();
 
-  // Genre filter
-  const genre = searchParams.get("genre")?.trim();
+  // Genre filter (supports multiple: ?genre=Rock&genre=Jazz)
+  const genres_filter = searchParams.getAll("genre").map(g => g.trim()).filter(Boolean);
 
   // Sort
   const sortBy = searchParams.get("sortBy") || "popularity";
@@ -33,9 +33,13 @@ export async function GET(req: Request) {
     });
   }
 
-  if (genre) {
+  if (genres_filter.length === 1) {
     conditions.push({
-      genres: { has: genre },
+      genres: { has: genres_filter[0] },
+    });
+  } else if (genres_filter.length > 1) {
+    conditions.push({
+      genres: { hasSome: genres_filter },
     });
   }
 
