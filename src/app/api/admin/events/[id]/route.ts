@@ -139,6 +139,8 @@ export async function PATCH(
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
+        band: true,
+        venue: true,
         pledges: {
           where: { status: "ACTIVE" },
           include: { user: true },
@@ -263,8 +265,8 @@ export async function PATCH(
             await notifyPaymentFailed({
               userId: pledge.userId,
               eventId: id,
-              bandName: "the artist",
-              venueName: "the venue",
+              bandName: event.band.name,
+              venueName: event.venue.name,
             });
           } catch (err) {
             console.error(`Failed to send payment failed notification for pledge ${pledge.id}:`, err);

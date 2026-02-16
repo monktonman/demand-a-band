@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { eventId, quantity = 1 } = await req.json();
+    const { eventId, quantity = 1, paymentMethodId } = await req.json();
 
     if (!eventId) {
       return NextResponse.json(
@@ -120,6 +120,7 @@ export async function POST(req: Request) {
         quantity,
         totalAmount,
         status: "ACTIVE",
+        stripePaymentMethodId: paymentMethodId || null,
       },
       include: {
         event: {
