@@ -67,22 +67,22 @@ export function AdminBandsClient({ bands }: { bands: BandWithStats[] }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Bands</h1>
-        <p className="text-zinc-500">{bands.length} bands in the database</p>
+        <h1 className="text-2xl font-bold">Artists</h1>
+        <p className="text-zinc-500">{bands.length} artists in the database</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Music2 className="h-5 w-5 text-orange-600" />
-            Band Directory
+            Artist Directory
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Band</TableHead>
+                <TableHead>Artist</TableHead>
                 <TableHead>Genres</TableHead>
                 <TableHead className="text-right">Popularity</TableHead>
                 <TableHead className="text-right">Demand</TableHead>
@@ -146,13 +146,13 @@ export function AdminBandsClient({ bands }: { bands: BandWithStats[] }) {
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Band</DialogTitle>
+            <DialogTitle>Delete Artist</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-zinc-600">
             Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
             {deleteTarget && deleteTarget.eventCount > 0 && (
               <span className="mt-1 block text-amber-600">
-                This band has {deleteTarget.eventCount} event(s). You may not be
+                This artist has {deleteTarget.eventCount} event(s). You may not be
                 able to delete if any are active.
               </span>
             )}

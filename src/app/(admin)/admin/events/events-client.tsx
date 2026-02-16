@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, Plus, Trash2, Loader2 } from "lucide-react";
+import { Calendar, Plus, Trash2, Loader2, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "@/lib/constants";
@@ -106,7 +106,7 @@ export function AdminEventsClient({ events }: { events: SerializedEvent[] }) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Event</TableHead>
-                  <TableHead>Band</TableHead>
+                  <TableHead>Artist</TableHead>
                   <TableHead>Venue</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Price</TableHead>
@@ -149,16 +149,29 @@ export function AdminEventsClient({ events }: { events: SerializedEvent[] }) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {canDelete(event.status) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => setDeleteTarget(event)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-end gap-1">
+                        {canDelete(event.status) && (
+                          <Link href={`/admin/events/${event.id}/edit`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        )}
+                        {canDelete(event.status) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => setDeleteTarget(event)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

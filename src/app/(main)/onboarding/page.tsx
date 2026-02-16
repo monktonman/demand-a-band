@@ -26,7 +26,7 @@ export interface CityPreference {
 }
 
 const STEPS = [
-  { title: "Pick Your Bands & Genres", description: "What music do you want to see live?" },
+  { title: "Pick Your Artists & Genres", description: "What music do you want to see live?" },
   {
     title: "Your Location",
     description: "Where do you want to see shows?",
@@ -81,8 +81,8 @@ function OnboardingContent() {
             const newNum = parseInt(newCount);
             setSpotifyMessage(
               newNum > 0
-                ? `Imported ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from Spotify! (${newNum} new to our catalog)`
-                : `Imported ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
+                ? `Imported ${data.bands.length} artist${data.bands.length !== 1 ? "s" : ""} from Spotify! (${newNum} new to our catalog)`
+                : `Imported ${data.bands.length} artist${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
             );
           } else {
             setSpotifyImported(true);
@@ -98,9 +98,9 @@ function OnboardingContent() {
           );
         });
     } else if (spotifyStatus === "denied") {
-      setSpotifyMessage("Spotify access was denied. You can still pick bands manually.");
+      setSpotifyMessage("Spotify access was denied. You can still pick artists manually.");
     } else if (spotifyStatus === "error") {
-      setSpotifyMessage("Something went wrong with Spotify. You can still pick bands manually.");
+      setSpotifyMessage("Something went wrong with Spotify. You can still pick artists manually.");
     }
 
     // Clean URL params

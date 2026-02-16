@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  User,
   Settings,
   Ticket,
   Heart,
@@ -50,12 +49,6 @@ export function UserMenu({ user }: UserMenuProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/dashboard" className="cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            Dashboard
-          </Link>
-        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/my-events" className="cursor-pointer">
             <Ticket className="mr-2 h-4 w-4" />

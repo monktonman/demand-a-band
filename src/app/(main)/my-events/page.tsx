@@ -7,7 +7,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Ticket, Music2, MapPin, Calendar, Users, Clock, Sparkles, Heart, DollarSign, Share2, ArrowRight } from "lucide-react";
+import {
+  Ticket,
+  Music2,
+  MapPin,
+  Calendar,
+  Users,
+  Clock,
+  Sparkles,
+  Heart,
+  DollarSign,
+  Share2,
+  ArrowRight,
+  Sliders,
+} from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 
@@ -49,7 +62,7 @@ export default async function MyEventsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
 
-  const [pledges, dreamShows] = await Promise.all([
+  const [pledges, dreamShows, bandPrefs, genrePrefs, cityPrefs] = await Promise.all([
     prisma.pledge.findMany({
       where: { userId: session.user.id },
       include: {
@@ -72,6 +85,17 @@ export default async function MyEventsPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.userBandPreference.findMany({
+      where: { userId: session.user.id },
+      include: { band: true },
+      orderBy: { priority: "asc" },
+    }),
+    prisma.userGenrePreference.findMany({
+      where: { userId: session.user.id },
+    }),
+    prisma.userCityPreference.findMany({
+      where: { userId: session.user.id },
+    }),
   ]);
 
   const activePledges = pledges.filter((p) => p.status === "ACTIVE" || p.status === "CHARGED");
@@ -82,7 +106,7 @@ export default async function MyEventsPage() {
     .filter((p) => p.status === "ACTIVE" || p.status === "CHARGED")
     .reduce((sum, p) => sum + p.quantity, 0);
 
-  // Also get events the user might be interested in (based on band preferences)
+  // Get recommended events based on artist preferences
   const userBandIds = await prisma.userBandPreference.findMany({
     where: { userId: session.user.id },
     select: { bandId: true },
@@ -110,9 +134,11 @@ export default async function MyEventsPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">My Shows</h1>
+        <h1 className="text-3xl font-bold">
+          Welcome back{session.user.name ? `, ${session.user.name.split(" ")[0]}` : ""}
+        </h1>
         <p className="mt-1 text-zinc-500">
-          Track your pledged shows and discover new ones
+          Your shows, preferences, and recommendations
         </p>
       </div>
 
@@ -138,10 +164,10 @@ export default async function MyEventsPage() {
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Users className="h-8 w-8 text-blue-600" />
+            <Heart className="h-8 w-8 text-pink-600" />
             <div>
-              <p className="text-2xl font-bold">{totalTickets}</p>
-              <p className="text-xs text-zinc-500">Total Tickets</p>
+              <p className="text-2xl font-bold">{bandPrefs.length}</p>
+              <p className="text-xs text-zinc-500">Artists</p>
             </div>
           </CardContent>
         </Card>
@@ -186,7 +212,7 @@ export default async function MyEventsPage() {
                   <Card className="transition-all hover:shadow-lg hover:border-orange-200">
                     <CardContent className="p-5">
                       <div className="flex items-start gap-4">
-                        {/* Band icon */}
+                        {/* Artist icon */}
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-orange-100">
                           <Music2 className="h-7 w-7 text-orange-600" />
                         </div>
@@ -351,6 +377,130 @@ export default async function MyEventsPage() {
         )}
       </div>
 
+      {/* My Preferences — consolidated from Dashboard */}
+      <div className="mb-10">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Sliders className="h-5 w-5 text-purple-600" />
+            My Preferences
+          </h2>
+          <Link href="/preferences">
+            <Button variant="outline" size="sm">
+              Edit Preferences
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Artists & Genres */}
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Music2 className="h-4 w-4 text-orange-600" />
+                <h3 className="font-semibold text-sm">My Music</h3>
+              </div>
+              {bandPrefs.length > 0 || genrePrefs.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Genre chips */}
+                  {genrePrefs.length > 0 && (
+                    <div>
+                      <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                        Genres ({genrePrefs.length})
+                      </span>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {genrePrefs.map((pref) => (
+                          <Badge
+                            key={pref.id}
+                            variant="secondary"
+                            className="bg-purple-100 text-purple-700 text-xs"
+                          >
+                            {pref.genre}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Artist list */}
+                  {bandPrefs.length > 0 && (
+                    <div>
+                      <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                        Artists ({bandPrefs.length})
+                      </span>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {bandPrefs.slice(0, 12).map((pref) => (
+                          <Badge
+                            key={pref.id}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {pref.band.name}
+                            {pref.isDreamShow && (
+                              <Sparkles className="ml-1 h-2.5 w-2.5 text-amber-500" />
+                            )}
+                          </Badge>
+                        ))}
+                        {bandPrefs.length > 12 && (
+                          <Badge variant="outline" className="text-xs text-zinc-400">
+                            +{bandPrefs.length - 12} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-zinc-400">
+                  <Music2 className="mx-auto mb-2 h-6 w-6" />
+                  <p className="text-sm">No music preferences set</p>
+                  <Link href="/preferences">
+                    <Button variant="link" size="sm" className="mt-1 text-orange-600">
+                      Set up preferences
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Locations */}
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <MapPin className="h-4 w-4 text-blue-600" />
+                <h3 className="font-semibold text-sm">My Locations</h3>
+              </div>
+              {cityPrefs.length > 0 ? (
+                <div className="space-y-2">
+                  {cityPrefs.map((pref) => (
+                    <div
+                      key={pref.id}
+                      className="flex items-center justify-between rounded-lg border p-2.5"
+                    >
+                      <span className="font-medium text-sm">
+                        {pref.city}, {pref.state}
+                      </span>
+                      <span className="text-sm text-zinc-500">
+                        {pref.maxRadius} mi radius
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-zinc-400">
+                  <MapPin className="mx-auto mb-2 h-6 w-6" />
+                  <p className="text-sm">No cities set</p>
+                  <Link href="/preferences">
+                    <Button variant="link" size="sm" className="mt-1 text-orange-600">
+                      Add cities
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Past / Inactive Pledges */}
       {pastPledges.length > 0 && (
         <div className="mb-10">
@@ -389,7 +539,7 @@ export default async function MyEventsPage() {
             Recommended For You
           </h2>
           <p className="mb-4 text-sm text-zinc-500">
-            Based on your band preferences
+            Based on your artist preferences
           </p>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {suggestedEvents.map((event) => (

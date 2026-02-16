@@ -133,7 +133,7 @@ export default async function HomePage() {
                 Tell us your taste, we&apos;ll find the shows
               </h3>
               <p className="mt-3 text-zinc-600">
-                Share your favorite bands, genres, and where you want to see
+                Share your favorite artists, genres, and where you want to see
                 shows. We match you with proposed events based on fan demand in
                 your market.
               </p>
@@ -145,7 +145,7 @@ export default async function HomePage() {
                   <div>
                     <p className="font-medium">Set your preferences</p>
                     <p className="text-sm text-zinc-500">
-                      Pick your bands, genres, and location
+                      Pick your artists, genres, and location
                     </p>
                   </div>
                 </div>
@@ -354,7 +354,7 @@ export default async function HomePage() {
                 icon: Heart,
                 title: "Personalized",
                 description:
-                  "Set your bands, genres, and location — we match you with shows you actually want to see.",
+                  "Set your artists, genres, and location — we match you with shows you actually want to see.",
               },
               {
                 icon: Sparkles,

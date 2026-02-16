@@ -3,11 +3,105 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createPaymentIntent } from "@/lib/stripe-helpers";
+import { calculateServiceFee } from "@/lib/utils";
 import {
   notifyEventConfirmed,
   notifyEventCancelled,
   notifyPaymentFailed,
 } from "@/lib/notifications";
+
+// GET: Fetch single event (admin or operator)
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const event = await prisma.event.findUnique({
+    where: { id },
+    include: {
+      band: { select: { id: true, name: true, genres: true } },
+      venue: { select: { id: true, name: true, city: true, state: true, capacity: true } },
+      _count: { select: { pledges: true } },
+    },
+  });
+
+  if (!event) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ event });
+}
+
+// PUT: Update event fields (admin or operator, only PROPOSED or THRESHOLD_MET)
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { status: true },
+    });
+
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    if (event.status === "CONFIRMED" || event.status === "COMPLETED") {
+      return NextResponse.json(
+        { error: "Cannot edit confirmed or completed events" },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json();
+    const updateData: Record<string, unknown> = {};
+
+    // Editable fields
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description || null;
+    if (body.eventDate !== undefined) updateData.eventDate = new Date(body.eventDate);
+    if (body.doorsTime !== undefined) updateData.doorsTime = body.doorsTime ? new Date(body.doorsTime) : null;
+    if (body.showTime !== undefined) updateData.showTime = body.showTime ? new Date(body.showTime) : null;
+    if (body.pledgeDeadline !== undefined) updateData.pledgeDeadline = new Date(body.pledgeDeadline);
+    if (body.ticketPrice !== undefined) {
+      updateData.ticketPrice = body.ticketPrice;
+      updateData.serviceFee = calculateServiceFee(body.ticketPrice);
+    }
+    if (body.minPledges !== undefined) updateData.minPledges = body.minPledges;
+    if (body.maxCapacity !== undefined) updateData.maxCapacity = body.maxCapacity;
+
+    const updated = await prisma.event.update({
+      where: { id },
+      data: updateData,
+      include: {
+        band: { select: { id: true, name: true } },
+        venue: { select: { id: true, name: true } },
+      },
+    });
+
+    return NextResponse.json({ event: updated });
+  } catch (error) {
+    console.error("Event edit error:", error);
+    return NextResponse.json(
+      { error: "Failed to update event" },
+      { status: 500 }
+    );
+  }
+}
 
 // PATCH: Update event status (admin or operator)
 export async function PATCH(

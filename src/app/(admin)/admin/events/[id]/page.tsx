@@ -22,6 +22,7 @@ import {
   MapPin,
   Calendar,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
@@ -176,6 +177,14 @@ export default function AdminEventDetailPage({
             {event.band.name} at {event.venue.name}
           </p>
         </div>
+        {(event.status === "PROPOSED" || event.status === "THRESHOLD_MET" || event.status === "CANCELLED") && (
+          <Link href={`/admin/events/${id}/edit`}>
+            <Button variant="outline" className="gap-1.5">
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </Link>
+        )}
       </div>
 
       {result && (

@@ -35,7 +35,7 @@ export function StepComplete({
         <div className="flex flex-col items-center gap-1 rounded-lg bg-zinc-50 p-4">
           <Music className="h-6 w-6 text-orange-600" />
           <span className="text-2xl font-bold text-zinc-900">{bandCount}</span>
-          <span className="text-sm text-zinc-500">Bands selected</span>
+          <span className="text-sm text-zinc-500">Artists selected</span>
         </div>
 
         {dreamShowCount > 0 && (

@@ -238,7 +238,7 @@ export function StepBands({
           <h3 className="text-sm font-semibold text-zinc-700">Your Selections</h3>
           <span className="text-xs text-zinc-400">
             {selectedBands.length < 3
-              ? `Select at least ${3 - selectedBands.length} more band${3 - selectedBands.length !== 1 ? "s" : ""}`
+              ? `Select at least ${3 - selectedBands.length} more artist${3 - selectedBands.length !== 1 ? "s" : ""}`
               : "Ready to continue!"}
           </span>
         </div>
@@ -285,7 +285,7 @@ export function StepBands({
           <div className="mb-1.5 flex items-center gap-1.5">
             <Music className="h-3.5 w-3.5 text-zinc-500" />
             <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Bands
+              Artists
               {selectedBands.length > 0 && (
                 <span className="ml-1 text-orange-600">({selectedBands.length})</span>
               )}
@@ -356,7 +356,7 @@ export function StepBands({
           <div>
             <p className="text-sm font-medium text-green-800">Spotify Connected</p>
             <p className="text-xs text-green-600">
-              Bands imported from your listening history
+              Artists imported from your listening history
             </p>
           </div>
         </div>
@@ -394,7 +394,7 @@ export function StepBands({
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input
-            placeholder="Search for a band or artist..."
+            placeholder="Search for an artist..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -411,14 +411,14 @@ export function StepBands({
         {isLoading ? (
           <div className="flex items-center justify-center py-16 text-zinc-400">
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Loading bands...
+            Loading artists...
           </div>
         ) : displayBands.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
             {activeTab === "search" && searchQuery.length < 2 ? (
               <p>Type at least 2 characters to search</p>
             ) : activeTab === "genres" && !activeGenre ? (
-              <p>Select a genre above to browse bands</p>
+              <p>Select a genre above to browse artists</p>
             ) : activeTab === "spotify" && !spotifyLoaded ? (
               <p>Loading your Spotify artists...</p>
             ) : activeTab === "spotify" && spotifyLoaded ? (
@@ -436,7 +436,7 @@ export function StepBands({
                 )}
               </div>
             ) : (
-              <p>No bands found</p>
+              <p>No artists found</p>
             )}
           </div>
         ) : (
@@ -467,7 +467,7 @@ export function StepBands({
                       Loading...
                     </>
                   ) : (
-                    "Load More Bands"
+                    "Load More Artists"
                   )}
                 </Button>
               </div>
@@ -480,8 +480,8 @@ export function StepBands({
       <div className="flex items-center justify-between border-t border-zinc-100 pt-4">
         <p className="text-sm text-zinc-400">
           {selectedBands.length < 3
-            ? `Select at least ${3 - selectedBands.length} more band${3 - selectedBands.length !== 1 ? "s" : ""}`
-            : `${selectedGenres.length > 0 ? `${selectedGenres.length} genre${selectedGenres.length !== 1 ? "s" : ""}, ` : ""}${selectedBands.length} band${selectedBands.length !== 1 ? "s" : ""} selected`}
+            ? `Select at least ${3 - selectedBands.length} more artist${3 - selectedBands.length !== 1 ? "s" : ""}`
+            : `${selectedGenres.length > 0 ? `${selectedGenres.length} genre${selectedGenres.length !== 1 ? "s" : ""}, ` : ""}${selectedBands.length} artist${selectedBands.length !== 1 ? "s" : ""} selected`}
         </p>
         <Button
           onClick={onNext}

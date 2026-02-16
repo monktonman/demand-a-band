@@ -188,8 +188,8 @@ function PreferencesContent() {
             const newNum = parseInt(newCount);
             setSpotifyMessage(
               newNum > 0
-                ? `Imported ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from Spotify! (${newNum} new to our catalog)`
-                : `Imported ${data.bands.length} band${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
+                ? `Imported ${data.bands.length} artist${data.bands.length !== 1 ? "s" : ""} from Spotify! (${newNum} new to our catalog)`
+                : `Imported ${data.bands.length} artist${data.bands.length !== 1 ? "s" : ""} from your Spotify listening history!`
             );
           } else {
             // Spotify connected but no top artists found
@@ -207,11 +207,11 @@ function PreferencesContent() {
         });
     } else if (spotifyStatus === "denied") {
       setSpotifyMessage(
-        "Spotify access was denied. You can still add bands manually."
+        "Spotify access was denied. You can still add artists manually."
       );
     } else if (spotifyStatus === "error") {
       setSpotifyMessage(
-        "Something went wrong with Spotify. You can still add bands manually."
+        "Something went wrong with Spotify. You can still add artists manually."
       );
     }
 
@@ -395,7 +395,7 @@ function PreferencesContent() {
 
   const handleSave = async () => {
     if (selectedBands.length < 3) {
-      setError("Please select at least 3 bands.");
+      setError("Please select at least 3 artists.");
       return;
     }
     if (cityPreferences.length === 0) {
@@ -490,7 +490,7 @@ function PreferencesContent() {
         <div>
           <div className="flex items-center gap-3">
             <Link
-              href="/dashboard"
+              href="/my-events"
               className="rounded-full p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -498,7 +498,7 @@ function PreferencesContent() {
             <div>
               <h1 className="text-2xl font-bold">Your Preferences</h1>
               <p className="text-sm text-zinc-500">
-                Manage your bands, genres, and locations
+                Manage your artists, genres, and locations
               </p>
             </div>
           </div>
@@ -596,7 +596,7 @@ function PreferencesContent() {
                 ) : (
                   <>
                     <Plus className="mr-1 h-3 w-3" />
-                    Add Bands
+                    Add Artists
                   </>
                 )}
               </Button>
@@ -651,7 +651,7 @@ function PreferencesContent() {
               <div className="mb-1.5 flex items-center gap-1.5">
                 <Music className="h-3.5 w-3.5 text-zinc-500" />
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Bands
+                  Artists
                   {selectedBands.length > 0 && (
                     <span className="ml-1 text-orange-600">({selectedBands.length})</span>
                   )}
@@ -676,7 +676,7 @@ function PreferencesContent() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-zinc-400">No bands selected — browse below or import from Spotify</p>
+                <p className="text-xs text-zinc-400">No artists selected — browse below or import from Spotify</p>
               )}
             </div>
           </div>
@@ -730,7 +730,7 @@ function PreferencesContent() {
                 <div className="relative mt-3">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                   <Input
-                    placeholder="Search for a band or artist..."
+                    placeholder="Search for an artist..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -747,14 +747,14 @@ function PreferencesContent() {
                 {isBrowserLoading ? (
                   <div className="flex items-center justify-center py-16 text-zinc-400">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Loading bands...
+                    Loading artists...
                   </div>
                 ) : displayBands.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-zinc-400">
                     {activeTab === "search" && searchQuery.length < 2 ? (
                       <p>Type at least 2 characters to search</p>
                     ) : activeTab === "genres" && !activeGenre ? (
-                      <p>Select a genre above to browse bands</p>
+                      <p>Select a genre above to browse artists</p>
                     ) : activeTab === "spotify" && spotifyLoaded ? (
                       <div className="text-center">
                         <p className="mb-3">No Spotify artists found</p>
@@ -771,7 +771,7 @@ function PreferencesContent() {
                         </Button>
                       </div>
                     ) : (
-                      <p>No bands found</p>
+                      <p>No artists found</p>
                     )}
                   </div>
                 ) : (
@@ -803,7 +803,7 @@ function PreferencesContent() {
                               Loading...
                             </>
                           ) : (
-                            "Load More Bands"
+                            "Load More Artists"
                           )}
                         </Button>
                       </div>
@@ -926,7 +926,7 @@ function PreferencesContent() {
           <div className="flex items-center gap-4">
             <p className="text-sm text-zinc-500">
               {selectedGenres.length > 0 && `${selectedGenres.length} genre${selectedGenres.length !== 1 ? "s" : ""}, `}
-              {selectedBands.length} band{selectedBands.length !== 1 ? "s" : ""},
+              {selectedBands.length} artist{selectedBands.length !== 1 ? "s" : ""},
               {" "}
               {cityPreferences.length} location
               {cityPreferences.length !== 1 ? "s" : ""}

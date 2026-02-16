@@ -150,16 +150,27 @@ function CreateEventForm() {
       return;
     }
     if (!formData.bandId) {
-      setError("Please select a band");
+      setError("Please select an artist");
       setIsLoading(false);
       return;
     }
 
     try {
+      // Combine time fields with event date for proper datetime values
+      const submitData = {
+        ...formData,
+        doorsTime: formData.doorsTime && formData.eventDate
+          ? `${formData.eventDate.split("T")[0]}T${formData.doorsTime}`
+          : undefined,
+        showTime: formData.showTime && formData.eventDate
+          ? `${formData.eventDate.split("T")[0]}T${formData.showTime}`
+          : undefined,
+      };
+
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       if (!res.ok) {
@@ -262,11 +273,11 @@ function CreateEventForm() {
         <Card>
           <CardHeader>
             <CardTitle>Show Details</CardTitle>
-            <CardDescription>Select the band and venue</CardDescription>
+            <CardDescription>Select the artist and venue</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Band</Label>
+              <Label>Artist</Label>
               <div ref={bandDropdownRef} className="relative">
                 {selectedBandName && formData.bandId ? (
                   <div className="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3">
@@ -296,7 +307,7 @@ function CreateEventForm() {
                         setShowBandDropdown(true);
                       }}
                       onFocus={() => setShowBandDropdown(true)}
-                      placeholder="Search for a band..."
+                      placeholder="Search for an artist..."
                       className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400"
                     />
                     {/* Hidden required input for form validation */}
@@ -314,7 +325,7 @@ function CreateEventForm() {
                       </div>
                     ) : bandSearchResults.length === 0 ? (
                       <div className="p-3 text-sm text-zinc-400">
-                        No bands found for &ldquo;{bandSearchQuery}&rdquo;
+                        No artists found for &ldquo;{bandSearchQuery}&rdquo;
                       </div>
                     ) : (
                       bandSearchResults.map((band) => (
@@ -407,12 +418,12 @@ function CreateEventForm() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Event Date & Time</Label>
+                <Label>Event Date</Label>
                 <DateTimePicker
                   value={formData.eventDate}
                   onChange={(val) => updateField("eventDate", val)}
                   required
-                  includeTime={true}
+                  includeTime={false}
                   minDate={new Date()}
                   placeholder="Pick event date"
                 />
@@ -423,12 +434,64 @@ function CreateEventForm() {
                   value={formData.pledgeDeadline}
                   onChange={(val) => updateField("pledgeDeadline", val)}
                   required
-                  includeTime={true}
+                  includeTime={false}
                   minDate={new Date()}
                   placeholder="Pick deadline"
                 />
                 <p className="text-xs text-zinc-400">
                   Fans must pledge by this date
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Doors Open</Label>
+                <select
+                  value={formData.doorsTime}
+                  onChange={(e) => updateField("doorsTime", e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Not set</option>
+                  {Array.from({ length: 24 }, (_, h) =>
+                    [0, 30].map((m) => {
+                      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                      const ampm = h < 12 ? "AM" : "PM";
+                      const label = `${hour12}:${m.toString().padStart(2, "0")} ${ampm}`;
+                      const value = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+                      return (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      );
+                    })
+                  )}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Show Time</Label>
+                <select
+                  value={formData.showTime}
+                  onChange={(e) => updateField("showTime", e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Not set</option>
+                  {Array.from({ length: 24 }, (_, h) =>
+                    [0, 30].map((m) => {
+                      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                      const ampm = h < 12 ? "AM" : "PM";
+                      const label = `${hour12}:${m.toString().padStart(2, "0")} ${ampm}`;
+                      const value = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+                      return (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      );
+                    })
+                  )}
+                </select>
+                <p className="text-xs text-zinc-400">
+                  The time the show starts
                 </p>
               </div>
             </div>

@@ -166,7 +166,7 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-2xl px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard">
+        <Link href="/my-events">
           <Button variant="outline" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -425,7 +425,7 @@ export default function SettingsPage() {
             </span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-zinc-500">Band preferences</span>
+            <span className="text-zinc-500">Artist preferences</span>
             <span className="font-medium">{profile?._count?.bandPreferences || 0}</span>
           </div>
           <div className="flex justify-between text-sm">
@@ -437,7 +437,7 @@ export default function SettingsPage() {
 
       {/* Save Button */}
       <div className="flex justify-end gap-3 pb-8">
-        <Link href="/dashboard">
+        <Link href="/my-events">
           <Button type="button" variant="outline">
             Cancel
           </Button>
