@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, Loader2, MapPin, Plus, X } from "lucide-react";
+import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import type { CityPreference } from "@/app/(main)/onboarding/page";
 
 interface StepLocationProps {
@@ -56,8 +57,19 @@ export function StepLocation({
 
   return (
     <div className="space-y-6">
+      {/* Guided tour for first-time users */}
+      <OnboardingTour step="location" />
+
+      {/* Location concept explainer */}
+      <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-sky-50 p-4">
+        <p className="text-sm text-zinc-700 leading-relaxed">
+          <span className="font-semibold text-blue-700">Almost done!</span>{" "}
+          Tell us where you want to see shows. We&apos;ll use your location to find nearby events and notify you when artists you love are performing in your area.
+        </p>
+      </div>
+
       {/* Current cities */}
-      <div className="space-y-3">
+      <div data-tour="onboarding-cities" className="space-y-3">
         {cityPreferences.map((pref, index) => (
           <Card key={index} className="p-4">
             <div className="flex items-start justify-between">
@@ -76,7 +88,7 @@ export function StepLocation({
                 </button>
               )}
             </div>
-            <div className="mt-4">
+            <div data-tour="onboarding-radius" className="mt-4">
               <div className="flex items-center justify-between text-sm">
                 <Label>Travel radius</Label>
                 <span className="font-medium text-orange-600">
@@ -102,7 +114,7 @@ export function StepLocation({
 
       {/* Suggested cities */}
       {availableSuggestions.length > 0 && (
-        <div>
+        <div data-tour="onboarding-suggested-cities">
           <h3 className="mb-2 text-sm font-medium text-zinc-700">
             Suggested cities
           </h3>

@@ -9,6 +9,7 @@ import { GENRES } from "@/lib/constants";
 import { BandSelectionCard } from "./band-selection-card";
 import { GenreChips } from "./genre-chips";
 import { GenrePreferenceSelector } from "./genre-preference-selector";
+import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import type { SelectedBand } from "@/app/(main)/onboarding/page";
 
 interface StepBandsProps {
@@ -232,8 +233,19 @@ export function StepBands({
 
   return (
     <div className="space-y-5">
+      {/* Guided tour for first-time users */}
+      <OnboardingTour step="bands" />
+
+      {/* ── Concept explainer ── */}
+      <div data-tour="onboarding-concept" className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4">
+        <p className="text-sm text-zinc-700 leading-relaxed">
+          <span className="font-semibold text-orange-700">How it works:</span>{" "}
+          Tell us your favorite artists and genres. When enough fans demand the same artist, we&apos;ll work to book the show in Baltimore. Your picks directly influence which artists come to town!
+        </p>
+      </div>
+
       {/* ── Current selections summary ── */}
-      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
+      <div data-tour="onboarding-selections" className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-zinc-700">Your Selections</h3>
           <span className="text-xs text-zinc-400">
@@ -318,10 +330,12 @@ export function StepBands({
       </div>
 
       {/* ── Genre preference picker ── */}
-      <GenrePreferenceSelector
-        selectedGenres={selectedGenres}
-        onToggle={onToggleGenre}
-      />
+      <div data-tour="onboarding-genres">
+        <GenrePreferenceSelector
+          selectedGenres={selectedGenres}
+          onToggle={onToggleGenre}
+        />
+      </div>
 
       {/* Spotify import button */}
       {showSpotify && !spotifyImported && onSpotifyConnect && (
@@ -363,7 +377,7 @@ export function StepBands({
       )}
 
       {/* Tab bar */}
-      <div className="flex gap-1 rounded-lg bg-zinc-100 p-1">
+      <div data-tour="onboarding-browse" className="flex gap-1 rounded-lg bg-zinc-100 p-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
