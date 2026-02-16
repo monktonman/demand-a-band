@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
+import { normalizePhone } from "@/lib/sms";
 
 export async function POST(req: Request) {
   try {
@@ -23,12 +24,19 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
+    // Normalize phone if provided
+    const phone = validatedData.phone
+      ? normalizePhone(validatedData.phone)
+      : null;
+
     // Create user
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
         name: validatedData.name,
         hashedPassword,
+        phone,
+        smsOptIn: !!phone, // opted in by providing phone number
       },
     });
 

@@ -14,13 +14,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Music, Loader2, Eye, EyeOff } from "lucide-react";
+import { Music, Loader2, Eye, EyeOff, Phone } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -48,7 +49,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, phone: phone || undefined }),
       });
 
       const data = await res.json();
@@ -125,6 +126,28 @@ export default function RegisterPage() {
                 required
                 disabled={isLoading}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">
+                Mobile phone{" "}
+                <span className="text-zinc-400 font-normal">(optional)</span>
+              </Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="(410) 555-1234"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={isLoading}
+                  className="pl-9"
+                />
+              </div>
+              <p className="text-xs text-zinc-400">
+                Get text alerts when your favorite artists have shows. Standard rates apply.
+              </p>
             </div>
 
             <div className="space-y-2">

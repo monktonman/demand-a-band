@@ -15,12 +15,14 @@ model User {
   id               String    @id @default(cuid())
   email            String    @unique
   name             String?
+  phone            String?
   hashedPassword   String?
   emailVerified    DateTime?
   image            String?
   role             UserRole  @default(FAN)
   stripeCustomerId String?   @unique
   onboarded        Boolean   @default(false)
+  smsOptIn         Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

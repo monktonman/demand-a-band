@@ -1,10 +1,20 @@
 import { z } from "zod";
 
 // Auth
+// US phone: optional, must be 10 digits (we strip formatting)
+const phoneSchema = z
+  .string()
+  .transform((val) => val.replace(/[\s\-\(\)\.]/g, "")) // strip formatting
+  .refine((val) => val === "" || /^(\+?1)?[2-9]\d{9}$/.test(val), {
+    message: "Enter a valid US phone number",
+  })
+  .optional();
+
 export const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  phone: phoneSchema,
 });
 
 export const loginSchema = z.object({

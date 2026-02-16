@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/resend";
+import { sendSms, normalizePhone } from "@/lib/sms";
 import {
   pledgeConfirmationEmail,
   eventConfirmedEmail,
@@ -8,6 +9,14 @@ import {
   paymentFailedEmail,
   newEventMatchEmail,
 } from "@/lib/email-templates";
+import {
+  pledgeConfirmationSms,
+  eventConfirmedSms,
+  eventCancelledSms,
+  thresholdMetSms,
+  newEventMatchSms,
+  paymentFailedSms,
+} from "@/lib/sms-templates";
 import { formatDate, formatCurrency, formatCurrencyDecimal } from "@/lib/utils";
 
 type NotificationType =
@@ -43,7 +52,14 @@ export async function createNotification({
   });
 }
 
-// Send pledge confirmation (in-app + email)
+// Helper to send SMS if user has phone + opted in
+async function maybeSendSms(user: { phone?: string | null; smsOptIn?: boolean }, body: string) {
+  if (user.phone && user.smsOptIn) {
+    await sendSms({ to: normalizePhone(user.phone), body });
+  }
+}
+
+// Send pledge confirmation (in-app + email + SMS)
 export async function notifyPledgeConfirmed({
   userId,
   eventId,
@@ -63,17 +79,20 @@ export async function notifyPledgeConfirmed({
 }) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, email: true },
+    select: { name: true, email: true, phone: true, smsOptIn: true },
   });
 
   if (!user) return;
+
+  const formattedDate = formatDate(eventDate);
+  const formattedAmount = formatCurrencyDecimal(totalAmount);
 
   // In-app notification
   await createNotification({
     userId,
     type: "EVENT_CREATED",
     title: "Pledge Confirmed",
-    message: `Your pledge for ${bandName} at ${venueName} is confirmed. You'll be charged ${formatCurrencyDecimal(totalAmount)} if the show is confirmed.`,
+    message: `Your pledge for ${bandName} at ${venueName} is confirmed. You'll be charged ${formattedAmount} if the show is confirmed.`,
     eventId,
   });
 
@@ -83,12 +102,15 @@ export async function notifyPledgeConfirmed({
       user.name || "Fan",
       bandName,
       venueName,
-      formatDate(eventDate),
-      formatCurrencyDecimal(totalAmount),
+      formattedDate,
+      formattedAmount,
       quantity
     );
     await sendEmail({ to: user.email, ...email });
   }
+
+  // SMS
+  await maybeSendSms(user, pledgeConfirmationSms(bandName, venueName, formattedDate, formattedAmount));
 }
 
 // Notify all pledgers when event is confirmed
@@ -107,6 +129,8 @@ export async function notifyEventConfirmed(eventId: string) {
 
   if (!event) return;
 
+  const formattedDate = formatDate(event.eventDate);
+
   for (const pledge of event.pledges) {
     // In-app notification
     await createNotification({
@@ -123,11 +147,14 @@ export async function notifyEventConfirmed(eventId: string) {
         pledge.user.name || "Fan",
         event.band.name,
         event.venue.name,
-        formatDate(event.eventDate),
+        formattedDate,
         formatCurrencyDecimal(Number(pledge.totalAmount))
       );
       await sendEmail({ to: pledge.user.email, ...email });
     }
+
+    // SMS
+    await maybeSendSms(pledge.user, eventConfirmedSms(event.band.name, event.venue.name, formattedDate));
   }
 }
 
@@ -165,6 +192,9 @@ export async function notifyEventCancelled(eventId: string) {
       );
       await sendEmail({ to: pledge.user.email, ...email });
     }
+
+    // SMS
+    await maybeSendSms(pledge.user, eventCancelledSms(event.band.name, event.venue.name));
   }
 }
 
@@ -206,6 +236,9 @@ export async function notifyThresholdMet(eventId: string) {
       );
       await sendEmail({ to: pledge.user.email, ...email });
     }
+
+    // SMS
+    await maybeSendSms(pledge.user, thresholdMetSms(event.band.name, event.venue.name, event._count.pledges));
   }
 }
 
@@ -223,7 +256,7 @@ export async function notifyPaymentFailed({
 }) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { name: true, email: true },
+    select: { name: true, email: true, phone: true, smsOptIn: true },
   });
 
   if (!user) return;
@@ -244,6 +277,9 @@ export async function notifyPaymentFailed({
     );
     await sendEmail({ to: user.email, ...email });
   }
+
+  // SMS
+  await maybeSendSms(user, paymentFailedSms(bandName, venueName));
 }
 
 // Notify fans who have this band in their preferences about a new event
@@ -262,7 +298,7 @@ export async function notifyMatchingFans(eventId: string) {
   const matchingPrefs = await prisma.userBandPreference.findMany({
     where: { bandId: event.bandId },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, email: true, phone: true, smsOptIn: true } },
     },
   });
 
@@ -294,6 +330,12 @@ export async function notifyMatchingFans(eventId: string) {
       );
       await sendEmail({ to: pref.user.email, ...email });
     }
+
+    // SMS
+    await maybeSendSms(
+      pref.user,
+      newEventMatchSms(event.band.name, event.venue.name, eventDate, ticketPrice, event.slug)
+    );
   }
 
   console.log(`[Notify] Sent new event notifications to ${matchingPrefs.length} fans for ${event.band.name}`);
