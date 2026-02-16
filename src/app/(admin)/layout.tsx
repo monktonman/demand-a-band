@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/layout/navbar";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
+import { FeedbackButton } from "@/components/shared/feedback-button";
 
 export default function AdminLayout({
   children,
@@ -15,6 +16,7 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+      <FeedbackButton />
     </div>
   );
 }

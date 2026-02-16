@@ -6,8 +6,9 @@ import {
   eventCancelledEmail,
   thresholdMetEmail,
   paymentFailedEmail,
+  newEventMatchEmail,
 } from "@/lib/email-templates";
-import { formatDate, formatCurrencyDecimal } from "@/lib/utils";
+import { formatDate, formatCurrency, formatCurrencyDecimal } from "@/lib/utils";
 
 type NotificationType =
   | "EVENT_CREATED"
@@ -243,4 +244,57 @@ export async function notifyPaymentFailed({
     );
     await sendEmail({ to: user.email, ...email });
   }
+}
+
+// Notify fans who have this band in their preferences about a new event
+export async function notifyMatchingFans(eventId: string) {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: {
+      band: true,
+      venue: true,
+    },
+  });
+
+  if (!event) return;
+
+  // Find all users who have this band in their preferences
+  const matchingPrefs = await prisma.userBandPreference.findMany({
+    where: { bandId: event.bandId },
+    include: {
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  if (matchingPrefs.length === 0) return;
+
+  const ticketPrice = formatCurrency(Number(event.ticketPrice));
+  const eventDate = formatDate(event.eventDate);
+
+  for (const pref of matchingPrefs) {
+    // In-app notification
+    await createNotification({
+      userId: pref.user.id,
+      type: "EVENT_CREATED",
+      title: `${event.band.name} show just dropped! 🎶`,
+      message: `${event.band.name} at ${event.venue.name} on ${eventDate}. Tickets from ${ticketPrice}. Pledge now!`,
+      eventId,
+    });
+
+    // Email
+    if (pref.user.email) {
+      const email = newEventMatchEmail(
+        pref.user.name || "Fan",
+        event.band.name,
+        event.venue.name,
+        `${event.venue.city}, ${event.venue.state}`,
+        eventDate,
+        ticketPrice,
+        event.slug
+      );
+      await sendEmail({ to: pref.user.email, ...email });
+    }
+  }
+
+  console.log(`[Notify] Sent new event notifications to ${matchingPrefs.length} fans for ${event.band.name}`);
 }

@@ -5,6 +5,7 @@ import { isStaffRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { createEventSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
+import { notifyMatchingFans } from "@/lib/notifications";
 
 // GET: List events (public)
 export async function GET(req: Request) {
@@ -67,6 +68,9 @@ export async function POST(req: Request) {
         venue: true,
       },
     });
+
+    // Notify fans who have this band in their preferences (async, don't block response)
+    notifyMatchingFans(event.id).catch(console.error);
 
     return NextResponse.json({ event }, { status: 201 });
   } catch (error) {

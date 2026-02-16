@@ -143,6 +143,33 @@ export function thresholdMetEmail(
   };
 }
 
+export function newEventMatchEmail(
+  name: string,
+  bandName: string,
+  venueName: string,
+  venueCity: string,
+  eventDate: string,
+  ticketPrice: string,
+  eventSlug: string
+): { subject: string; html: string } {
+  return {
+    subject: `${bandName} is coming to ${venueCity}! 🎶`,
+    html: baseTemplate(`
+      <h1>A Show You'll Love</h1>
+      <p>Hey ${name}, great news — <strong>${bandName}</strong> is one of your favorites, and a show just dropped!</p>
+      <div class="highlight">
+        <p style="margin: 4px 0;"><strong>${bandName}</strong></p>
+        <p style="margin: 4px 0;">📍 ${venueName} — ${venueCity}</p>
+        <p style="margin: 4px 0;">📅 ${eventDate}</p>
+        <p style="margin: 4px 0;">🎫 Tickets from ${ticketPrice}</p>
+      </div>
+      <p>Pledge now to lock in your spot. You'll only be charged if enough fans commit and the show is confirmed.</p>
+      <a href="${process.env.NEXTAUTH_URL || ""}/events/${eventSlug}" class="btn">Pledge Now</a>
+      <p style="color: #a1a1aa; font-size: 12px; margin-top: 16px;">You're receiving this because ${bandName} is in your preferences on Demand A Band.</p>
+    `),
+  };
+}
+
 export function paymentFailedEmail(
   name: string,
   bandName: string,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2, CalendarRange, Info, TrendingUp, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, CalendarRange, Info, TrendingUp, Sparkles, Search, X, Music2 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, calculateServiceFee } from "@/lib/utils";
 
@@ -33,10 +33,17 @@ interface Venue {
 function CreateEventForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [bands, setBands] = useState<Band[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Band search state
+  const [bandSearchQuery, setBandSearchQuery] = useState("");
+  const [bandSearchResults, setBandSearchResults] = useState<Band[]>([]);
+  const [bandSearching, setBandSearching] = useState(false);
+  const [showBandDropdown, setShowBandDropdown] = useState(false);
+  const [selectedBandName, setSelectedBandName] = useState("");
+  const bandDropdownRef = useRef<HTMLDivElement>(null);
 
   // Demand context from query params (set by "Promote" button)
   const prefillBandId = searchParams.get("bandId");
@@ -62,19 +69,66 @@ function CreateEventForm() {
     pledgeDeadline: "",
   });
 
+  // Set pre-filled band name
+  useEffect(() => {
+    if (prefillBandName) {
+      setSelectedBandName(decodeURIComponent(prefillBandName));
+    }
+  }, [prefillBandName]);
+
+  // Load venues
   useEffect(() => {
     async function loadData() {
-      const [bandsRes, venuesRes] = await Promise.all([
-        fetch("/api/bands"),
-        fetch("/api/admin/venues"),
-      ]);
-      const bandsData = await bandsRes.json();
+      const venuesRes = await fetch("/api/admin/venues");
       const venuesData = await venuesRes.json();
-      setBands(bandsData.bands || []);
       setVenues(venuesData.venues || []);
     }
     loadData();
   }, []);
+
+  // Debounced band search
+  useEffect(() => {
+    if (bandSearchQuery.length < 2) {
+      setBandSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setBandSearching(true);
+      try {
+        const res = await fetch(`/api/bands/search?q=${encodeURIComponent(bandSearchQuery)}&limit=12`);
+        const data = await res.json();
+        setBandSearchResults(data.bands || []);
+      } catch {
+        setBandSearchResults([]);
+      } finally {
+        setBandSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [bandSearchQuery]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (bandDropdownRef.current && !bandDropdownRef.current.contains(e.target as Node)) {
+        setShowBandDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const selectBand = (band: Band) => {
+    setSelectedBandName(band.name);
+    setBandSearchQuery("");
+    setShowBandDropdown(false);
+    updateField("bandId", band.id);
+    // Auto-generate title if venue is also selected
+    const venue = venues.find((v) => v.id === formData.venueId);
+    if (venue) {
+      setFormData((prev) => ({ ...prev, bandId: band.id, title: `${band.name} at ${venue.name}` }));
+    }
+  };
 
   const serviceFee = calculateServiceFee(formData.ticketPrice);
 
@@ -107,28 +161,17 @@ function CreateEventForm() {
   const updateField = (field: keyof typeof formData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
-    // Auto-generate title
-    if (field === "bandId" || field === "venueId") {
-      const bandName =
-        field === "bandId"
-          ? bands.find((b) => b.id === value)?.name
-          : bands.find((b) => b.id === formData.bandId)?.name;
-      const venueName =
-        field === "venueId"
-          ? venues.find((v) => v.id === value)?.name
-          : venues.find((v) => v.id === formData.venueId)?.name;
-
-      if (bandName && venueName) {
+    // Auto-generate title when venue changes
+    if (field === "venueId") {
+      const venueName = venues.find((v) => v.id === value)?.name;
+      if (selectedBandName && venueName) {
         setFormData((prev) => ({
           ...prev,
-          [field]: value as string,
-          title: `${bandName} at ${venueName}`,
+          venueId: value as string,
+          title: `${selectedBandName} at ${venueName}`,
         }));
       }
-    }
-
-    // Auto-set max capacity from venue
-    if (field === "venueId") {
+      // Auto-set max capacity from venue
       const venue = venues.find((v) => v.id === value);
       if (venue) {
         setFormData((prev) => ({
@@ -206,22 +249,90 @@ function CreateEventForm() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Band</Label>
-              <select
-                value={formData.bandId}
-                onChange={(e) => updateField("bandId", e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                required
-              >
-                <option value="">Select a band...</option>
-                {bands.map((band) => (
-                  <option key={band.id} value={band.id}>
-                    {band.name} ({band.genres.slice(0, 2).join(", ")})
-                  </option>
-                ))}
-              </select>
+              <div ref={bandDropdownRef} className="relative">
+                {selectedBandName && formData.bandId ? (
+                  <div className="flex h-10 items-center justify-between rounded-md border border-input bg-background px-3">
+                    <div className="flex items-center gap-2">
+                      <Music2 className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm font-medium">{selectedBandName}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedBandName("");
+                        setFormData((prev) => ({ ...prev, bandId: "", title: "" }));
+                      }}
+                      className="text-zinc-400 hover:text-zinc-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={bandSearchQuery}
+                      onChange={(e) => {
+                        setBandSearchQuery(e.target.value);
+                        setShowBandDropdown(true);
+                      }}
+                      onFocus={() => setShowBandDropdown(true)}
+                      placeholder="Search for a band..."
+                      className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400"
+                    />
+                    {/* Hidden required input for form validation */}
+                    <input type="hidden" value={formData.bandId} required />
+                  </>
+                )}
+
+                {/* Search results dropdown */}
+                {showBandDropdown && !selectedBandName && bandSearchQuery.length >= 2 && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border border-zinc-200 bg-white shadow-lg max-h-64 overflow-y-auto">
+                    {bandSearching ? (
+                      <div className="flex items-center gap-2 p-3 text-sm text-zinc-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Searching...
+                      </div>
+                    ) : bandSearchResults.length === 0 ? (
+                      <div className="p-3 text-sm text-zinc-400">
+                        No bands found for &ldquo;{bandSearchQuery}&rdquo;
+                      </div>
+                    ) : (
+                      bandSearchResults.map((band) => (
+                        <button
+                          key={band.id}
+                          type="button"
+                          onClick={() => selectBand(band)}
+                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-orange-50 transition-colors border-b border-zinc-50 last:border-0"
+                        >
+                          <Music2 className="h-4 w-4 shrink-0 text-orange-500" />
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{band.name}</p>
+                            <p className="text-xs text-zinc-400 truncate">
+                              {band.genres.slice(0, 3).join(", ")}
+                            </p>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {showBandDropdown && !selectedBandName && bandSearchQuery.length < 2 && bandSearchQuery.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full rounded-md border border-zinc-200 bg-white shadow-lg p-3 text-sm text-zinc-400">
+                    Type at least 2 characters to search...
+                  </div>
+                )}
+              </div>
               {isFromDemand && formData.bandId && (
                 <p className="text-xs text-orange-600">
                   Pre-selected from demand data
+                </p>
+              )}
+              {!formData.bandId && !selectedBandName && (
+                <p className="text-xs text-zinc-400">
+                  Search from {">"}1,000 artists in the database
                 </p>
               )}
             </div>
