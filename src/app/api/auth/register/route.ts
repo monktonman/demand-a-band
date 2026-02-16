@@ -42,11 +42,15 @@ export async function POST(req: Request) {
       },
     });
 
-    // Send welcome email (non-blocking — don't fail registration if email fails)
-    sendEmail({
-      to: user.email,
-      ...welcomeEmail(user.name || "there"),
-    }).catch((err) => console.error("Failed to send welcome email:", err));
+    // Send welcome email (awaited so serverless function doesn't exit early)
+    try {
+      await sendEmail({
+        to: user.email,
+        ...welcomeEmail(user.name || "there"),
+      });
+    } catch (err) {
+      console.error("Failed to send welcome email:", err);
+    }
 
     return NextResponse.json(
       {

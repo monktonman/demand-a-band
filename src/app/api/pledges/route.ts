@@ -128,16 +128,20 @@ export async function POST(req: Request) {
       },
     });
 
-    // Send pledge confirmation notification (async, don't block response)
-    notifyPledgeConfirmed({
-      userId: session.user.id,
-      eventId,
-      bandName: pledge.event.band.name,
-      venueName: pledge.event.venue.name,
-      eventDate: pledge.event.eventDate,
-      totalAmount,
-      quantity,
-    }).catch(console.error);
+    // Send pledge confirmation notification
+    try {
+      await notifyPledgeConfirmed({
+        userId: session.user.id,
+        eventId,
+        bandName: pledge.event.band.name,
+        venueName: pledge.event.venue.name,
+        eventDate: pledge.event.eventDate,
+        totalAmount,
+        quantity,
+      });
+    } catch (err) {
+      console.error("Failed to send pledge confirmation:", err);
+    }
 
     // Check if threshold is now met (using ticket quantities)
     const totalTickets = currentTicketCount + quantity;
@@ -148,7 +152,11 @@ export async function POST(req: Request) {
       });
 
       // Notify all pledgers that threshold was met
-      notifyThresholdMet(eventId).catch(console.error);
+      try {
+        await notifyThresholdMet(eventId);
+      } catch (err) {
+        console.error("Failed to notify threshold met:", err);
+      }
     }
 
     return NextResponse.json({ pledge }, { status: 201 });

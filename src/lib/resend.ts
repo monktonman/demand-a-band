@@ -16,20 +16,28 @@ interface SendEmailOptions {
 export async function sendEmail({ to, subject, html }: SendEmailOptions) {
   // Skip sending if no Resend client (no API key)
   if (!resend) {
-    console.log(`[Email] Would send to ${to}: ${subject}`);
+    console.log(`[Email] No RESEND_API_KEY — would send to ${to}: ${subject}`);
     return null;
   }
 
   try {
-    const result = await resend.emails.send({
+    console.log(`[Email] Sending to ${to}: ${subject} (from: ${FROM_EMAIL})`);
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject,
       html,
     });
-    return result;
+
+    if (error) {
+      console.error(`[Email] Resend error for ${to}:`, JSON.stringify(error));
+      return null;
+    }
+
+    console.log(`[Email] Sent successfully to ${to}, id: ${data?.id}`);
+    return data;
   } catch (error) {
-    console.error("Failed to send email:", error);
+    console.error(`[Email] Exception sending to ${to}:`, error);
     return null;
   }
 }

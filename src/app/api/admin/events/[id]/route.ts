@@ -189,13 +189,14 @@ export async function PATCH(
 
           // Generate tickets if payment succeeded immediately
           if (paymentIntent.status === "succeeded") {
-            generateTicketsForPledge(pledge.id)
-              .then((tickets) => {
-                if (tickets.length > 0) {
-                  sendTicketEmails(pledge.id).catch(console.error);
-                }
-              })
-              .catch(console.error);
+            try {
+              const tickets = await generateTicketsForPledge(pledge.id);
+              if (tickets.length > 0) {
+                await sendTicketEmails(pledge.id);
+              }
+            } catch (ticketErr) {
+              console.error(`Failed to generate tickets/send emails for pledge ${pledge.id}:`, ticketErr);
+            }
           }
 
           results.push({ pledgeId: pledge.id, success: true });
@@ -248,18 +249,26 @@ export async function PATCH(
       });
 
       // Send notifications to all pledgers
-      notifyEventConfirmed(id).catch(console.error);
+      try {
+        await notifyEventConfirmed(id);
+      } catch (err) {
+        console.error("Failed to send event confirmed notifications:", err);
+      }
 
       // Notify users with failed payments
       for (const result of results.filter((r) => !r.success)) {
         const pledge = event.pledges.find((p) => p.id === result.pledgeId);
         if (pledge) {
-          notifyPaymentFailed({
-            userId: pledge.userId,
-            eventId: id,
-            bandName: "the artist",
-            venueName: "the venue",
-          }).catch(console.error);
+          try {
+            await notifyPaymentFailed({
+              userId: pledge.userId,
+              eventId: id,
+              bandName: "the artist",
+              venueName: "the venue",
+            });
+          } catch (err) {
+            console.error(`Failed to send payment failed notification for pledge ${pledge.id}:`, err);
+          }
         }
       }
 
@@ -302,7 +311,11 @@ export async function PATCH(
       });
 
       // Send cancellation notifications
-      notifyEventCancelled(id).catch(console.error);
+      try {
+        await notifyEventCancelled(id);
+      } catch (err) {
+        console.error("Failed to send event cancelled notifications:", err);
+      }
 
       return NextResponse.json({
         event: { id, status: "CANCELLED" },

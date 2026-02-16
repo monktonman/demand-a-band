@@ -84,8 +84,12 @@ export async function POST(req: Request) {
       },
     });
 
-    // Notify fans who have this band in their preferences (async, don't block response)
-    notifyMatchingFans(event.id).catch(console.error);
+    // Notify fans who have this band in their preferences
+    try {
+      await notifyMatchingFans(event.id);
+    } catch (err) {
+      console.error("Failed to notify matching fans:", err);
+    }
 
     return NextResponse.json({ event }, { status: 201 });
   } catch (error) {

@@ -53,13 +53,14 @@ export async function POST(req: Request) {
           console.log(`Pledge ${pledgeId} charged successfully`);
 
           // Generate tickets (idempotent — skips if already generated)
-          generateTicketsForPledge(pledgeId)
-            .then((tickets) => {
-              if (tickets.length > 0) {
-                sendTicketEmails(pledgeId).catch(console.error);
-              }
-            })
-            .catch(console.error);
+          try {
+            const tickets = await generateTicketsForPledge(pledgeId);
+            if (tickets.length > 0) {
+              await sendTicketEmails(pledgeId);
+            }
+          } catch (err) {
+            console.error(`Failed to generate tickets/send emails for pledge ${pledgeId}:`, err);
+          }
         }
         break;
       }
