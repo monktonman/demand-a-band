@@ -12,9 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowLeft, Loader2, CalendarRange, Info, TrendingUp, Sparkles, Search, X, Music2 } from "lucide-react";
+import { ArrowLeft, Loader2, CalendarRange, Info, TrendingUp, Sparkles, Search, X, Music2, Clock } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, calculateServiceFee } from "@/lib/utils";
+import { DateTimePicker, DatePicker } from "@/components/ui/date-time-picker";
 
 interface Band {
   id: string;
@@ -136,6 +137,23 @@ function CreateEventForm() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    // Validate date fields that aren't native inputs
+    if (!formData.eventDate) {
+      setError("Please select a target event date");
+      setIsLoading(false);
+      return;
+    }
+    if (!formData.pledgeDeadline) {
+      setError("Please select a pledge deadline");
+      setIsLoading(false);
+      return;
+    }
+    if (!formData.bandId) {
+      setError("Please select a band");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch("/api/events", {
@@ -401,18 +419,18 @@ function CreateEventForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Window Start</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={formData.windowStart}
-                  onChange={(e) => updateField("windowStart", e.target.value)}
+                  onChange={(val) => updateField("windowStart", val)}
+                  minDate={new Date()}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Window End</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={formData.windowEnd}
-                  onChange={(e) => updateField("windowEnd", e.target.value)}
+                  onChange={(val) => updateField("windowEnd", val)}
+                  minDate={new Date()}
                 />
               </div>
             </div>
@@ -428,30 +446,39 @@ function CreateEventForm() {
               </CardDescription>
             )}
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Target Event Date</Label>
-                <Input
-                  type="datetime-local"
+                <Label className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-orange-600" />
+                  Target Event Date & Time
+                </Label>
+                <DateTimePicker
                   value={formData.eventDate}
-                  onChange={(e) => updateField("eventDate", e.target.value)}
+                  onChange={(val) => updateField("eventDate", val)}
                   required
+                  includeTime={true}
+                  minDate={new Date()}
                 />
                 <p className="text-xs text-zinc-400">
                   Shown as estimate until confirmed
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Pledge Deadline</Label>
-                <Input
-                  type="datetime-local"
+                <Label className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-zinc-500" />
+                  Pledge Deadline
+                </Label>
+                <DateTimePicker
                   value={formData.pledgeDeadline}
-                  onChange={(e) =>
-                    updateField("pledgeDeadline", e.target.value)
-                  }
+                  onChange={(val) => updateField("pledgeDeadline", val)}
                   required
+                  includeTime={true}
+                  minDate={new Date()}
                 />
+                <p className="text-xs text-zinc-400">
+                  Fans must pledge by this date & time
+                </p>
               </div>
             </div>
 
