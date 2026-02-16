@@ -72,7 +72,7 @@ function getFirstDayOfMonth(year: number, month: number) {
 }
 
 function formatPrice(min: string | null, max: string | null): string {
-  if (!min && !max) return "Price TBA";
+  if (!min && !max) return "Check site for price";
   const minNum = min ? Number(min) : null;
   const maxNum = max ? Number(max) : null;
   if (minNum && maxNum && minNum !== maxNum) {
@@ -80,7 +80,7 @@ function formatPrice(min: string | null, max: string | null): string {
   }
   if (minNum) return `From $${Math.round(minNum)}`;
   if (maxNum) return `Up to $${Math.round(maxNum)}`;
-  return "Price TBA";
+  return "Check site for price";
 }
 
 function formatEventDate(isoDate: string): string {
@@ -494,7 +494,7 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                     </a>
                   ) : (
                     <Button className="flex-1" disabled>
-                      Tickets TBA
+                      Tickets Not Yet Available
                     </Button>
                   )}
                   <Button
