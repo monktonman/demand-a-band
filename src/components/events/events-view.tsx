@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { LayoutGrid, Calendar, Ticket, Globe, Sparkles, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutGrid, Calendar, Ticket, Globe, Sparkles, Filter, X, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/events/event-card";
 import { ExternalEventCard, type ExternalEventData } from "@/components/events/external-event-card";
@@ -72,13 +72,34 @@ export function EventsView({
   const [showMatchesOnly, setShowMatchesOnly] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
   const [showGenreFilter, setShowGenreFilter] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<string>("all");
+  const [showCityFilter, setShowCityFilter] = useState(false);
 
   const hasExternalEvents = externalEvents.length > 0;
   const hasDabEvents = events.length > 0;
 
+  // Build sorted list of unique cities from external events
+  const availableCities = useMemo(() => {
+    const cityCounts = new Map<string, number>();
+    for (const e of externalEvents) {
+      const key = `${e.venueCity}, ${e.venueState}`;
+      cityCounts.set(key, (cityCounts.get(key) || 0) + 1);
+    }
+    return Array.from(cityCounts.entries())
+      .sort((a, b) => b[1] - a[1]) // most events first
+      .map(([city, count]) => ({ label: city, count }));
+  }, [externalEvents]);
+
   // Filter external events based on active filters
   const filteredExternalEvents = useMemo(() => {
     let filtered = externalEvents;
+
+    // Filter by city
+    if (selectedCity !== "all") {
+      filtered = filtered.filter(
+        (e) => `${e.venueCity}, ${e.venueState}` === selectedCity
+      );
+    }
 
     // Filter by "My Matches"
     if (showMatchesOnly) {
@@ -98,10 +119,10 @@ export function EventsView({
       if (!a.matchesPreferences && b.matchesPreferences) return 1;
       return new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime();
     });
-  }, [externalEvents, showMatchesOnly, selectedGenres]);
+  }, [externalEvents, showMatchesOnly, selectedGenres, selectedCity]);
 
   const matchCount = externalEvents.filter((e) => e.matchesPreferences).length;
-  const isFiltering = showMatchesOnly || selectedGenres.size > 0;
+  const isFiltering = showMatchesOnly || selectedGenres.size > 0 || selectedCity !== "all";
 
   // Pagination for external events
   const EVENTS_PER_PAGE = 12;
@@ -110,7 +131,7 @@ export function EventsView({
   // Reset page when filters change
   useEffect(() => {
     setExternalPage(1);
-  }, [showMatchesOnly, selectedGenres, source]);
+  }, [showMatchesOnly, selectedGenres, selectedCity, source]);
 
   const totalExternalPages = Math.ceil(filteredExternalEvents.length / EVENTS_PER_PAGE);
   const paginatedExternalEvents = filteredExternalEvents.slice(
@@ -133,6 +154,7 @@ export function EventsView({
   const clearFilters = () => {
     setShowMatchesOnly(false);
     setSelectedGenres(new Set());
+    setSelectedCity("all");
   };
 
   // Convert serialized dates back for EventCard
@@ -224,7 +246,7 @@ export function EventsView({
               }`}
             >
               <Globe className="h-3.5 w-3.5" />
-              Baltimore
+              Concerts
               <span className="text-xs text-zinc-400">
                 ({filteredExternalCount})
               </span>
@@ -281,10 +303,25 @@ export function EventsView({
               </button>
             )}
 
+            {/* Location filter toggle */}
+            {availableCities.length > 1 && (
+              <button
+                onClick={() => { setShowCityFilter(!showCityFilter); setShowGenreFilter(false); }}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                  selectedCity !== "all"
+                    ? "bg-green-100 text-green-800 border border-green-300 shadow-sm"
+                    : "bg-zinc-100 text-zinc-600 border border-zinc-200 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                }`}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                {selectedCity !== "all" ? selectedCity : "Location"}
+              </button>
+            )}
+
             {/* Genre filter toggle */}
             {allGenres.length > 0 && (
               <button
-                onClick={() => setShowGenreFilter(!showGenreFilter)}
+                onClick={() => { setShowGenreFilter(!showGenreFilter); setShowCityFilter(false); }}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
                   selectedGenres.size > 0
                     ? "bg-blue-100 text-blue-800 border border-blue-300 shadow-sm"
@@ -312,6 +349,35 @@ export function EventsView({
               </button>
             )}
           </div>
+
+          {/* City chips (expandable) */}
+          {showCityFilter && availableCities.length > 1 && (
+            <div className="flex flex-wrap gap-1.5 rounded-lg border bg-zinc-50/50 p-3">
+              <button
+                onClick={() => setSelectedCity("all")}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                  selectedCity === "all"
+                    ? "bg-green-600 text-white shadow-sm"
+                    : "bg-white text-zinc-600 border border-zinc-200 hover:border-green-300 hover:text-green-700"
+                }`}
+              >
+                All Cities ({externalEvents.length})
+              </button>
+              {availableCities.map(({ label, count }) => (
+                <button
+                  key={label}
+                  onClick={() => setSelectedCity(label)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all ${
+                    selectedCity === label
+                      ? "bg-green-600 text-white shadow-sm"
+                      : "bg-white text-zinc-600 border border-zinc-200 hover:border-green-300 hover:text-green-700"
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Genre chips (expandable) */}
           {showGenreFilter && allGenres.length > 0 && (
@@ -360,7 +426,7 @@ export function EventsView({
               {source === "all" && (
                 <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-zinc-700">
                   <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                  Happening in Baltimore
+                  {selectedCity !== "all" ? `Happening in ${selectedCity}` : "Concerts Near You"}
                   {isFiltering && (
                     <span className="text-xs font-normal text-zinc-400">
                       (showing {filteredExternalEvents.length} of {externalEvents.length})
