@@ -16,11 +16,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar, Plus, Trash2, Loader2, Pencil } from "lucide-react";
+import {
+  Calendar,
+  Plus,
+  Trash2,
+  Loader2,
+  Pencil,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
 import { EVENT_STATUS_LABELS, EVENT_STATUS_COLORS } from "@/lib/constants";
@@ -43,9 +52,19 @@ export function AdminEventsClient({ events }: { events: SerializedEvent[] }) {
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<SerializedEvent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<SerializedEvent | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<SerializedEvent | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const canDelete = (status: EventStatus) =>
     status === "PROPOSED" || status === "CANCELLED";
+
+  const canConfirm = (status: EventStatus) =>
+    status === "PROPOSED" || status === "THRESHOLD_MET";
+
+  const canCancel = (status: EventStatus) =>
+    status !== "COMPLETED" && status !== "CANCELLED";
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -68,6 +87,65 @@ export function AdminEventsClient({ events }: { events: SerializedEvent[] }) {
       toast.error(err instanceof Error ? err.message : "Failed to delete event");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmTarget) return;
+    setIsConfirming(true);
+
+    try {
+      const res = await fetch(`/api/admin/events/${confirmTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm" }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to confirm event");
+      }
+
+      const paymentMsg = data.payments
+        ? `${data.payments.succeeded}/${data.payments.total} payments processed.${data.payments.failed > 0 ? ` ${data.payments.failed} failed.` : ""}`
+        : "";
+      toast.success(`"${confirmTarget.title}" confirmed! ${paymentMsg}`);
+      setConfirmTarget(null);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to confirm event");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+
+    try {
+      const res = await fetch(`/api/admin/events/${cancelTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel" }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to cancel event");
+      }
+
+      toast.success(
+        `"${cancelTarget.title}" cancelled. ${data.cancelledPledges} pledges released.`
+      );
+      setCancelTarget(null);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to cancel event");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -150,12 +228,35 @@ export function AdminEventsClient({ events }: { events: SerializedEvent[] }) {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {canConfirm(event.status) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => setConfirmTarget(event)}
+                            title="Confirm event & charge pledgers"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {canCancel(event.status) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                            onClick={() => setCancelTarget(event)}
+                            title="Cancel event"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         {canDelete(event.status) && (
                           <Link href={`/admin/events/${event.id}/edit`}>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50"
+                              title="Edit event"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
@@ -167,6 +268,7 @@ export function AdminEventsClient({ events }: { events: SerializedEvent[] }) {
                             size="sm"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             onClick={() => setDeleteTarget(event)}
+                            title="Delete event"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -188,6 +290,82 @@ export function AdminEventsClient({ events }: { events: SerializedEvent[] }) {
           )}
         </CardContent>
       </Card>
+
+      {/* Confirm Event Dialog */}
+      <Dialog open={!!confirmTarget} onOpenChange={() => setConfirmTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Event</DialogTitle>
+            <DialogDescription>
+              This will lock in the event and charge all pledgers.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-zinc-600">
+            Are you sure you want to confirm{" "}
+            <strong>&quot;{confirmTarget?.title}&quot;</strong>?
+          </p>
+          <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+            {confirmTarget?.pledgeCount ?? 0} pledger(s) will be charged. This
+            action cannot be undone.
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmTarget(null)}>
+              Go Back
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              disabled={isConfirming}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isConfirming ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
+              Confirm & Charge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Event Dialog */}
+      <Dialog open={!!cancelTarget} onOpenChange={() => setCancelTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Event</DialogTitle>
+            <DialogDescription>
+              This will cancel the event and release all pledges.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-zinc-600">
+            Are you sure you want to cancel{" "}
+            <strong>&quot;{cancelTarget?.title}&quot;</strong>?
+          </p>
+          {cancelTarget && cancelTarget.pledgeCount > 0 && (
+            <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+              {cancelTarget.pledgeCount} pledge(s) will be cancelled. No charges
+              will be made.
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>
+              Go Back
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={isCancelling}
+            >
+              {isCancelling ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="mr-2 h-4 w-4" />
+              )}
+              Cancel Event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
