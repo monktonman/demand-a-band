@@ -51,7 +51,7 @@ export function StepComplete({
 
       <div className="space-y-3">
         <p className="text-sm text-zinc-400">
-          Browse upcoming events and pledge your support to make shows happen.
+          Browse upcoming shows and pledge your support to make them happen in Baltimore.
         </p>
 
         <Button
@@ -59,7 +59,7 @@ export function StepComplete({
           size="lg"
           className="bg-orange-600 text-base hover:bg-orange-700"
         >
-          Browse Events
+          Browse Shows
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

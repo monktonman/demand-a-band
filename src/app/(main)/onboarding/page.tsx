@@ -155,8 +155,11 @@ function OnboardingContent() {
         throw new Error("Failed to save preferences");
       }
 
-      // Update session to mark as onboarded
+      // Update session to mark as onboarded and wait for it to propagate
       await updateSession({ onboarded: true });
+
+      // Small delay to ensure the session token is updated before the user navigates
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       // Move to completion step
       handleNext();
@@ -168,8 +171,8 @@ function OnboardingContent() {
   };
 
   const handleFinish = () => {
-    router.push("/events");
-    router.refresh();
+    // Force a full page navigation to ensure the updated session is picked up
+    window.location.href = "/events";
   };
 
   return (
