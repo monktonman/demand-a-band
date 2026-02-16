@@ -13,6 +13,8 @@ import {
   X,
   Sparkles,
   Users,
+  QrCode,
+  Ticket,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,7 @@ import {
 import { EVENT_STATUS_COLORS, EVENT_STATUS_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import type { EventStatus } from "@prisma/client";
+import type { UserPledgeInfo } from "@/components/events/events-view";
 
 interface CalendarEvent {
   id: string;
@@ -62,6 +65,7 @@ type CalendarItem =
 interface EventsCalendarProps {
   events: CalendarEvent[];
   externalEvents?: ExternalCalendarEvent[];
+  userPledges?: UserPledgeInfo[];
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -101,7 +105,7 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarProps) {
+export function EventsCalendar({ events, externalEvents = [], userPledges = [] }: EventsCalendarProps) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -549,6 +553,18 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                     <Badge variant="outline" className="text-xs">
                       DAB Show
                     </Badge>
+                    {userPledges.find((p) => p.eventId === selectedDabEvent.id)?.hasTickets && (
+                      <Badge className="bg-green-600 text-white">
+                        <QrCode className="mr-1 h-3 w-3" />
+                        You Have Tickets
+                      </Badge>
+                    )}
+                    {userPledges.find((p) => p.eventId === selectedDabEvent.id && !p.hasTickets) && (
+                      <Badge className="bg-blue-100 text-blue-800">
+                        <Ticket className="mr-1 h-3 w-3" />
+                        Pledged
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Venue & Date */}
@@ -617,19 +633,44 @@ export function EventsCalendar({ events, externalEvents = [] }: EventsCalendarPr
                   )}
 
                   {/* Action buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <Link href={`/events/${selectedDabEvent.slug}?from=calendar`} className="flex-1">
-                      <Button className="w-full bg-orange-600 hover:bg-orange-700">
-                        View Details & Pledge
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedDabEvent(null)}
-                    >
-                      Close
-                    </Button>
-                  </div>
+                  {(() => {
+                    const userPledge = userPledges.find((p) => p.eventId === selectedDabEvent.id);
+                    return (
+                      <div className="flex flex-col gap-2 pt-2">
+                        {userPledge?.hasTickets && (
+                          <Link href={`/my-events/tickets/${userPledge.pledgeId}`} className="w-full">
+                            <Button className="w-full bg-green-600 hover:bg-green-700">
+                              <QrCode className="mr-2 h-4 w-4" />
+                              View My Tickets
+                            </Button>
+                          </Link>
+                        )}
+                        <div className="flex gap-2">
+                          <Link href={`/events/${selectedDabEvent.slug}?from=calendar`} className="flex-1">
+                            <Button
+                              className={`w-full ${userPledge?.hasTickets ? "" : "bg-orange-600 hover:bg-orange-700"}`}
+                              variant={userPledge?.hasTickets ? "outline" : "default"}
+                            >
+                              {userPledge ? (
+                                <>
+                                  <Ticket className="mr-2 h-4 w-4" />
+                                  View Event Details
+                                </>
+                              ) : (
+                                "View Details & Pledge"
+                              )}
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            onClick={() => setSelectedDabEvent(null)}
+                          >
+                            Close
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             );

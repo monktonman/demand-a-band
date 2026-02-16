@@ -29,6 +29,13 @@ interface SerializedEvent {
   _count: { pledges: number };
 }
 
+export interface UserPledgeInfo {
+  pledgeId: string;
+  eventId: string;
+  status: string;
+  hasTickets: boolean;
+}
+
 interface EventsViewProps {
   events: SerializedEvent[];
   externalEvents?: (ExternalEventData & { matchesPreferences?: boolean })[];
@@ -36,6 +43,7 @@ interface EventsViewProps {
   hasPreferences?: boolean;
   userGenres?: string[];
   userCities?: string[];
+  userPledges?: UserPledgeInfo[];
 }
 
 export function EventsView({
@@ -45,6 +53,7 @@ export function EventsView({
   hasPreferences = false,
   userGenres = [],
   userCities = [],
+  userPledges = [],
 }: EventsViewProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -567,6 +576,7 @@ export function EventsView({
         <EventsCalendar
           events={showDabCards ? calendarEvents : []}
           externalEvents={showExternalCards ? calendarExternalEvents : []}
+          userPledges={userPledges}
         />
       )}
     </div>

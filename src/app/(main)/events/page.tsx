@@ -40,7 +40,7 @@ export default async function EventsPage() {
 
   // Fetch user preferences if logged in
   const userId = session?.user?.id;
-  const [genrePrefs, bandPrefs, cityPrefs] = userId
+  const [genrePrefs, bandPrefs, cityPrefs, userPledges] = userId
     ? await Promise.all([
         prisma.userGenrePreference.findMany({
           where: { userId },
@@ -54,8 +54,17 @@ export default async function EventsPage() {
           where: { userId },
           select: { city: true, state: true },
         }),
+        prisma.pledge.findMany({
+          where: { userId, status: { in: ["ACTIVE", "CHARGED"] } },
+          select: {
+            id: true,
+            eventId: true,
+            status: true,
+            tickets: { select: { id: true } },
+          },
+        }),
       ])
-    : [[], [], []];
+    : [[], [], [], []];
 
   const userGenres = genrePrefs.map((g) => g.genre.toLowerCase());
   const userBandNames = bandPrefs.map((b) => b.band.name.toLowerCase());
@@ -160,6 +169,12 @@ export default async function EventsPage() {
           hasPreferences={hasPreferences}
           userGenres={genrePrefs.map((g) => g.genre)}
           userCities={userCities}
+          userPledges={userPledges.map((p) => ({
+            pledgeId: p.id,
+            eventId: p.eventId,
+            status: p.status,
+            hasTickets: p.tickets.length > 0,
+          }))}
         />
       ) : (
         <div className="py-24 text-center">
