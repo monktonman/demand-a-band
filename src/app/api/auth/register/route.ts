@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations";
 import { normalizePhone } from "@/lib/sms";
-import { sendEmail } from "@/lib/resend";
+import { sendEmailWithLog } from "@/lib/resend";
 import { emailVerificationEmail } from "@/lib/email-templates";
 
 export async function POST(req: Request) {
@@ -59,7 +59,12 @@ export async function POST(req: Request) {
     try {
       const verifyUrl = `${process.env.NEXTAUTH_URL || "https://demanda.band"}/api/auth/verify-email?token=${token}`;
       const emailContent = emailVerificationEmail(validatedData.name || "there", verifyUrl);
-      await sendEmail({ to: validatedData.email, ...emailContent });
+      await sendEmailWithLog({
+        to: validatedData.email,
+        ...emailContent,
+        templateType: "emailVerification",
+        userId: user.id,
+      });
     } catch (err) {
       console.error("Failed to send verification email:", err);
     }

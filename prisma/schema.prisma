@@ -431,3 +431,37 @@ model Feedback {
 
   @@index([createdAt])
 }
+
+// ============================================
+// EMAIL LOG (admin email tracking)
+// ============================================
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  BOUNCED
+  COMPLAINED
+  FAILED
+}
+
+model EmailLog {
+  id           String      @id @default(cuid())
+  resendId     String?     @unique
+  to           String
+  subject      String
+  templateType String?
+  status       EmailStatus @default(SENT)
+  userId       String?
+  eventId      String?
+  metadata     String?     @db.Text
+  sentBy       String?
+  errorMessage String?     @db.Text
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([to])
+  @@index([status])
+  @@index([templateType])
+  @@index([createdAt])
+}

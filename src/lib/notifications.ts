@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/resend";
+import { sendEmailWithLog } from "@/lib/resend";
 import { sendSms, normalizePhone } from "@/lib/sms";
 import {
   pledgeConfirmationEmail,
@@ -109,7 +109,14 @@ export async function notifyPledgeConfirmed({
       formattedAmount,
       quantity
     );
-    await sendEmail({ to: user.email, ...email });
+    await sendEmailWithLog({
+      to: user.email,
+      ...email,
+      templateType: "pledgeConfirmation",
+      userId,
+      eventId,
+      metadata: { bandName, venueName, eventDate: formattedDate, totalAmount: formattedAmount, quantity },
+    });
   }
 
   // SMS
@@ -153,7 +160,14 @@ export async function notifyEventConfirmed(eventId: string) {
         formattedDate,
         formatCurrencyDecimal(Number(pledge.totalAmount))
       );
-      await sendEmail({ to: pledge.user.email, ...email });
+      await sendEmailWithLog({
+        to: pledge.user.email,
+        ...email,
+        templateType: "eventConfirmed",
+        userId: pledge.userId,
+        eventId,
+        metadata: { bandName: event.band.name, venueName: event.venue.name, eventDate: formattedDate },
+      });
     }
 
     // SMS
@@ -193,7 +207,14 @@ export async function notifyEventCancelled(eventId: string) {
         event.band.name,
         event.venue.name
       );
-      await sendEmail({ to: pledge.user.email, ...email });
+      await sendEmailWithLog({
+        to: pledge.user.email,
+        ...email,
+        templateType: "eventCancelled",
+        userId: pledge.userId,
+        eventId,
+        metadata: { bandName: event.band.name, venueName: event.venue.name },
+      });
     }
 
     // SMS
@@ -237,7 +258,14 @@ export async function notifyThresholdMet(eventId: string) {
         event._count.pledges,
         event.minPledges
       );
-      await sendEmail({ to: pledge.user.email, ...email });
+      await sendEmailWithLog({
+        to: pledge.user.email,
+        ...email,
+        templateType: "thresholdMet",
+        userId: pledge.userId,
+        eventId,
+        metadata: { bandName: event.band.name, venueName: event.venue.name, pledgeCount: event._count.pledges },
+      });
     }
 
     // SMS
@@ -278,7 +306,14 @@ export async function notifyPaymentFailed({
       bandName,
       venueName
     );
-    await sendEmail({ to: user.email, ...email });
+    await sendEmailWithLog({
+      to: user.email,
+      ...email,
+      templateType: "paymentFailed",
+      userId,
+      eventId,
+      metadata: { bandName, venueName },
+    });
   }
 
   // SMS
@@ -358,7 +393,14 @@ export async function notifyMatchingFans(eventId: string) {
         ticketPrice,
         event.slug
       );
-      await sendEmail({ to: pref.user.email, ...email });
+      await sendEmailWithLog({
+        to: pref.user.email,
+        ...email,
+        templateType: "newEventMatch",
+        userId: pref.user.id,
+        eventId,
+        metadata: { bandName: event.band.name, venueName: event.venue.name, matchType: "band" },
+      });
     }
 
     await maybeSendSms(
@@ -388,7 +430,14 @@ export async function notifyMatchingFans(eventId: string) {
         ticketPrice,
         event.slug
       );
-      await sendEmail({ to: match.user.email, ...email });
+      await sendEmailWithLog({
+        to: match.user.email,
+        ...email,
+        templateType: "newEventMatch",
+        userId: match.user.id,
+        eventId,
+        metadata: { bandName: event.band.name, venueName: event.venue.name, matchType: "genre", matchingGenres },
+      });
     }
 
     await maybeSendSms(
@@ -444,7 +493,14 @@ export async function sendTicketEmails(pledgeId: string) {
       showTime,
       ticketsWithQr
     );
-    await sendEmail({ to: pledge.user.email, ...email });
+    await sendEmailWithLog({
+      to: pledge.user.email,
+      ...email,
+      templateType: "ticket",
+      userId: pledge.userId,
+      eventId: pledge.eventId,
+      metadata: { bandName: pledge.event.band.name, venueName: pledge.event.venue.name, ticketCount: ticketsWithQr.length },
+    });
     console.log(`[Tickets] Sent ticket email to ${pledge.user.email} for ${pledge.event.band.name}`);
   }
 

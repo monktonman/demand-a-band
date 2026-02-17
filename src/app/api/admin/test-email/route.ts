@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { sendEmail } from "@/lib/resend";
+import { sendEmailWithLog } from "@/lib/resend";
 
 // POST: Send a test email (admin only)
 export async function POST(req: Request) {
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No recipient email" }, { status: 400 });
   }
 
-  const result = await sendEmail({
+  const result = await sendEmailWithLog({
     to: recipient,
     subject: "Demand A Band — Test Email",
     html: `
@@ -36,6 +36,8 @@ export async function POST(req: Request) {
         </div>
       </div>
     `,
+    templateType: "testEmail",
+    sentBy: session.user.email || "admin",
   });
 
   if (result) {

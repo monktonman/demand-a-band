@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
-import { sendEmail } from "@/lib/resend";
+import { sendEmailWithLog } from "@/lib/resend";
 import { emailVerificationEmail } from "@/lib/email-templates";
 
 // GET: Verify email with token (called when user clicks the link)
@@ -108,7 +108,12 @@ export async function POST(req: Request) {
     // Send verification email
     const verifyUrl = `${process.env.NEXTAUTH_URL || "https://demanda.band"}/api/auth/verify-email?token=${token}`;
     const emailContent = emailVerificationEmail(user.name || "there", verifyUrl);
-    await sendEmail({ to: email, ...emailContent });
+    await sendEmailWithLog({
+      to: email,
+      ...emailContent,
+      templateType: "emailVerification",
+      userId: user.id,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

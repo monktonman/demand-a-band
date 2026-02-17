@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendEmail } from "@/lib/resend";
+import { sendEmailWithLog } from "@/lib/resend";
 import { welcomeEmail } from "@/lib/email-templates";
 
 // GET: Fetch user's preferences
@@ -121,9 +121,11 @@ export async function POST(req: Request) {
 
       if (user?.email) {
         try {
-          await sendEmail({
+          await sendEmailWithLog({
             to: user.email,
             ...welcomeEmail(user.name || "there"),
+            templateType: "welcome",
+            userId: session.user.id,
           });
         } catch (err) {
           console.error("Failed to send welcome email:", err);
