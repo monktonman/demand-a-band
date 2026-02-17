@@ -62,3 +62,8 @@ export const MAX_TICKET_PRICE = 10000;
 export const PRICE_QUICK_OPTIONS = [15, 25, 40, 60, 100, 250, 500, 1000];
 
 export const DREAM_SHOW_MIN_PRICE = 100;
+
+// Email rate limiting — delay (ms) between sends in batch notifications.
+// Resend free tier: 2 emails/sec → 600ms delay.
+// TODO: Set to 0 when upgrading to Resend Pro (50+/sec).
+export const EMAIL_RATE_LIMIT_MS = 600;

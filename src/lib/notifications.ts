@@ -21,11 +21,8 @@ import {
 } from "@/lib/sms-templates";
 import { formatDate, formatTime, formatCurrency, formatCurrencyDecimal } from "@/lib/utils";
 import { generateQrDataUri } from "@/lib/tickets";
+import { EMAIL_RATE_LIMIT_MS } from "@/lib/constants";
 
-// TODO(resend-upgrade): Remove or set EMAIL_RATE_LIMIT_MS=0 when upgrading from
-// Resend free tier (2 emails/sec). Pro tier allows 50+/sec.
-// See: https://resend.com/pricing
-const EMAIL_DELAY_MS = parseInt(process.env.EMAIL_RATE_LIMIT_MS || "600", 10);
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -150,7 +147,7 @@ export async function notifyEventConfirmed(eventId: string) {
   const formattedDate = formatDate(event.eventDate);
 
   for (let i = 0; i < event.pledges.length; i++) {
-    if (i > 0) await sleep(EMAIL_DELAY_MS);
+    if (i > 0) await sleep(EMAIL_RATE_LIMIT_MS);
     const pledge = event.pledges[i];
     // In-app notification
     await createNotification({
@@ -201,7 +198,7 @@ export async function notifyEventCancelled(eventId: string) {
   if (!event) return;
 
   for (let i = 0; i < event.pledges.length; i++) {
-    if (i > 0) await sleep(EMAIL_DELAY_MS);
+    if (i > 0) await sleep(EMAIL_RATE_LIMIT_MS);
     const pledge = event.pledges[i];
     // In-app notification
     await createNotification({
@@ -252,7 +249,7 @@ export async function notifyThresholdMet(eventId: string) {
   if (!event) return;
 
   for (let i = 0; i < event.pledges.length; i++) {
-    if (i > 0) await sleep(EMAIL_DELAY_MS);
+    if (i > 0) await sleep(EMAIL_RATE_LIMIT_MS);
     const pledge = event.pledges[i];
     // In-app notification
     await createNotification({
@@ -399,7 +396,7 @@ export async function notifyMatchingFans(eventId: string) {
     });
 
     if (pref.user.email) {
-      if (emailIndex > 0) await sleep(EMAIL_DELAY_MS);
+      if (emailIndex > 0) await sleep(EMAIL_RATE_LIMIT_MS);
       emailIndex++;
       const email = newEventMatchEmail(
         pref.user.name || "Fan",
@@ -438,7 +435,7 @@ export async function notifyMatchingFans(eventId: string) {
     });
 
     if (match.user.email) {
-      if (emailIndex > 0) await sleep(EMAIL_DELAY_MS);
+      if (emailIndex > 0) await sleep(EMAIL_RATE_LIMIT_MS);
       emailIndex++;
       const email = newEventMatchEmail(
         match.user.name || "Fan",
