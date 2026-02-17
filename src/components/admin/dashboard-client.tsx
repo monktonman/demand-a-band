@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { GenreDrillDownPanel } from "./genre-drill-down-panel";
 
 interface DashboardProps {
   stats: {
@@ -84,6 +85,7 @@ interface DashboardProps {
     genre: string;
     uniqueUsers: number;
   }>;
+  userRole: string;
 }
 
 const CHART_COLORS = [
@@ -101,6 +103,7 @@ export function AdminDashboardClient({
   dreamShows,
   cityDemand,
   genreDemand,
+  userRole,
 }: DashboardProps) {
   const router = useRouter();
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -110,11 +113,6 @@ export function AdminDashboardClient({
     name: g.genre,
     users: g.uniqueUsers,
   }));
-
-  // Bands filtered by selected genre
-  const filteredBands = selectedGenre
-    ? topBands.filter((b) => b.genres.includes(selectedGenre))
-    : [];
 
   // Data for top bands chart
   const topBandsChartData = topBands.slice(0, 10).map((band) => ({
@@ -322,85 +320,11 @@ export function AdminDashboardClient({
 
       {/* Genre Drill-Down Panel */}
       {selectedGenre && (
-        <Card className="border-orange-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div>
-              <CardTitle className="text-lg">
-                {selectedGenre}
-              </CardTitle>
-              <CardDescription>
-                {filteredBands.length} band{filteredBands.length !== 1 ? "s" : ""} with demand
-              </CardDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedGenre(null)}
-              className="text-zinc-400 hover:text-zinc-600"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {filteredBands.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Band</TableHead>
-                    <TableHead>Genres</TableHead>
-                    <TableHead className="text-right">Fans</TableHead>
-                    <TableHead className="text-right">Avg Price</TableHead>
-                    <TableHead className="text-right">Max Price</TableHead>
-                    <TableHead className="text-right">Dream Shows</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBands.map((band) => (
-                    <TableRow key={band.id}>
-                      <TableCell className="font-medium">{band.name}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {band.genres.slice(0, 2).map((g) => (
-                            <Badge key={g} variant="outline" className="text-xs">
-                              {g}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">{band.demandCount}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(band.avgPrice)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(band.maxPrice)}</TableCell>
-                      <TableCell className="text-right">
-                        {band.dreamShowCount > 0 ? (
-                          <Badge className="bg-amber-500">{band.dreamShowCount}</Badge>
-                        ) : (
-                          <span className="text-zinc-300">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href={buildPromoteUrl(band)}>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1 text-orange-600 border-orange-200 hover:bg-orange-50 hover:text-orange-700"
-                          >
-                            <ArrowUpRight className="h-3 w-3" />
-                            Create Event
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="py-6 text-center text-zinc-400">
-                No bands with demand in this genre among the top 25.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <GenreDrillDownPanel
+          genre={selectedGenre}
+          userRole={userRole}
+          onClose={() => setSelectedGenre(null)}
+        />
       )}
 
       {/* Main Content Tabs */}

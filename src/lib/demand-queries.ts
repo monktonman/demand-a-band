@@ -208,6 +208,199 @@ export async function getGenreDemand() {
     .sort((a, b) => b.uniqueUsers - a.uniqueUsers);
 }
 
+// Get bands in a genre with demand stats — paginated, searchable, sortable
+export async function getBandsByGenreWithDemand(
+  genre: string,
+  options: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: "demand" | "name" | "popularity";
+  } = {}
+) {
+  const { search, page = 1, limit = 15, sortBy = "demand" } = options;
+
+  // Build where clause
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = { genres: { has: genre } };
+  if (search && search.length >= 1) {
+    where.name = { contains: search, mode: "insensitive" };
+  }
+
+  // Build orderBy
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let orderBy: any;
+  switch (sortBy) {
+    case "name":
+      orderBy = { name: "asc" };
+      break;
+    case "popularity":
+      orderBy = { popularity: "desc" };
+      break;
+    case "demand":
+    default:
+      orderBy = { userPreferences: { _count: "desc" } };
+      break;
+  }
+
+  const [bands, total] = await Promise.all([
+    prisma.band.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * limit,
+      take: limit,
+      include: {
+        _count: { select: { userPreferences: true } },
+        userPreferences: {
+          select: { maxTicketPrice: true, isDreamShow: true },
+        },
+      },
+    }),
+    prisma.band.count({ where }),
+  ]);
+
+  return {
+    bands: bands.map((band) => {
+      const prefs = band.userPreferences;
+      const dreamShowPrefs = prefs.filter((p) => p.isDreamShow);
+      const avgPrice =
+        prefs.length > 0
+          ? prefs.reduce((sum, p) => sum + Number(p.maxTicketPrice), 0) / prefs.length
+          : 0;
+      const maxPrice =
+        prefs.length > 0
+          ? Math.max(...prefs.map((p) => Number(p.maxTicketPrice)))
+          : 0;
+
+      return {
+        id: band.id,
+        name: band.name,
+        slug: band.slug,
+        genres: band.genres,
+        imageUrl: band.imageUrl,
+        popularity: band.popularity,
+        demandCount: band._count.userPreferences,
+        avgPrice: Math.round(avgPrice),
+        maxPrice,
+        dreamShowCount: dreamShowPrefs.length,
+      };
+    }),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
+// Get users interested in a specific band (admin-only data)
+export async function getUsersForBand(bandId: string) {
+  const band = await prisma.band.findUnique({
+    where: { id: bandId },
+    select: { id: true, name: true, genres: true },
+  });
+
+  if (!band) return { band: null, users: [], totalUsers: 0 };
+
+  const prefs = await prisma.userBandPreference.findMany({
+    where: { bandId },
+    select: {
+      maxTicketPrice: true,
+      isDreamShow: true,
+      priority: true,
+      createdAt: true,
+      user: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return {
+    band,
+    users: prefs.map((p) => ({
+      id: p.user.id,
+      name: p.user.name,
+      email: p.user.email,
+      maxTicketPrice: Number(p.maxTicketPrice),
+      isDreamShow: p.isDreamShow,
+      priority: p.priority,
+      createdAt: p.createdAt.toISOString(),
+    })),
+    totalUsers: prefs.length,
+  };
+}
+
+// Get deduplicated users interested in a genre (admin-only data)
+export async function getUsersForGenre(genre: string) {
+  // Source 1: Users who directly selected this genre
+  const directPrefs = await prisma.userGenrePreference.findMany({
+    where: { genre },
+    select: {
+      user: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  // Source 2: Users who selected bands in this genre
+  const bandPrefs = await prisma.userBandPreference.findMany({
+    where: {
+      band: { genres: { has: genre } },
+    },
+    select: {
+      maxTicketPrice: true,
+      isDreamShow: true,
+      user: { select: { id: true, name: true, email: true } },
+      band: { select: { name: true } },
+    },
+  });
+
+  // Deduplicate by userId — direct genre preference is stronger signal
+  const userMap = new Map<
+    string,
+    {
+      id: string;
+      name: string | null;
+      email: string;
+      source: "genre_preference" | "band_preference";
+      bandName?: string;
+      maxTicketPrice?: number;
+      isDreamShow?: boolean;
+    }
+  >();
+
+  for (const pref of directPrefs) {
+    userMap.set(pref.user.id, {
+      id: pref.user.id,
+      name: pref.user.name,
+      email: pref.user.email,
+      source: "genre_preference",
+    });
+  }
+
+  for (const pref of bandPrefs) {
+    if (!userMap.has(pref.user.id)) {
+      userMap.set(pref.user.id, {
+        id: pref.user.id,
+        name: pref.user.name,
+        email: pref.user.email,
+        source: "band_preference",
+        bandName: pref.band.name,
+        maxTicketPrice: Number(pref.maxTicketPrice),
+        isDreamShow: pref.isDreamShow,
+      });
+    }
+  }
+
+  const users = Array.from(userMap.values());
+
+  return {
+    genre,
+    users,
+    totalUsers: users.length,
+  };
+}
+
 // Get demand by city
 export async function getDemandByCity() {
   const cities = await prisma.userCityPreference.groupBy({
