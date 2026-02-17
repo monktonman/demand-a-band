@@ -160,67 +160,52 @@ export async function getPlatformStats() {
   };
 }
 
-// Get genre demand — aggregated from user genre preferences + band genre signals
+// Get genre demand — count unique users per genre from both direct preferences and band selections
 export async function getGenreDemand() {
-  // Source 1: Direct fan genre selections from onboarding
-  const genrePrefs = await prisma.userGenrePreference.groupBy({
-    by: ["genre"],
-    _count: { userId: true },
-    orderBy: { _count: { userId: "desc" } },
+  // Source 1: Direct genre preferences — get userId + genre pairs
+  const genrePrefs = await prisma.userGenrePreference.findMany({
+    select: { userId: true, genre: true },
   });
 
-  // Source 2: Bands with demand — their genres carry implicit demand
-  const bandsWithDemand = await prisma.band.findMany({
+  // Source 2: Band preferences with band genres — get userId + band genres
+  const bandPrefsWithGenres = await prisma.userBandPreference.findMany({
     where: {
-      userPreferences: { some: {} },
+      band: { genres: { isEmpty: false } },
     },
     select: {
-      genres: true,
-      _count: { select: { userPreferences: true } },
+      userId: true,
+      band: { select: { genres: true } },
     },
   });
 
-  // Merge both sources into a genre map
-  const genreMap = new Map<
-    string,
-    { fanCount: number; bandCount: number; totalBandDemand: number }
-  >();
+  // Build a map of genre → Set of unique userIds
+  const genreUserMap = new Map<string, Set<string>>();
 
-  // Seed from direct genre preferences
-  for (const gp of genrePrefs) {
-    genreMap.set(gp.genre, {
-      fanCount: gp._count.userId,
-      bandCount: 0,
-      totalBandDemand: 0,
-    });
+  // Add users from direct genre selections
+  for (const pref of genrePrefs) {
+    if (!genreUserMap.has(pref.genre)) {
+      genreUserMap.set(pref.genre, new Set());
+    }
+    genreUserMap.get(pref.genre)!.add(pref.userId);
   }
 
-  // Augment from band genre data
-  for (const band of bandsWithDemand) {
-    for (const genre of band.genres) {
-      const existing = genreMap.get(genre) || {
-        fanCount: 0,
-        bandCount: 0,
-        totalBandDemand: 0,
-      };
-      existing.bandCount += 1;
-      existing.totalBandDemand += band._count.userPreferences;
-      genreMap.set(genre, existing);
+  // Add users from band selections (implied genre interest)
+  for (const pref of bandPrefsWithGenres) {
+    for (const genre of pref.band.genres) {
+      if (!genreUserMap.has(genre)) {
+        genreUserMap.set(genre, new Set());
+      }
+      genreUserMap.get(genre)!.add(pref.userId);
     }
   }
 
-  // Convert to sorted array by combined signal strength
-  return Array.from(genreMap.entries())
-    .map(([genre, data]) => ({
+  // Convert to sorted array by unique user count
+  return Array.from(genreUserMap.entries())
+    .map(([genre, userIds]) => ({
       genre,
-      fanCount: data.fanCount,
-      bandCount: data.bandCount,
-      totalBandDemand: data.totalBandDemand,
+      uniqueUsers: userIds.size,
     }))
-    .sort(
-      (a, b) =>
-        b.fanCount + b.totalBandDemand - (a.fanCount + a.totalBandDemand)
-    );
+    .sort((a, b) => b.uniqueUsers - a.uniqueUsers);
 }
 
 // Get demand by city

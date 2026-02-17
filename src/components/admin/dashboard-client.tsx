@@ -82,9 +82,7 @@ interface DashboardProps {
   }>;
   genreDemand: Array<{
     genre: string;
-    fanCount: number;
-    bandCount: number;
-    totalBandDemand: number;
+    uniqueUsers: number;
   }>;
 }
 
@@ -107,12 +105,10 @@ export function AdminDashboardClient({
   const router = useRouter();
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
 
-  // Genre chart data — top 12
+  // Genre chart data — top 12 by unique users
   const genreChartData = genreDemand.slice(0, 12).map((g) => ({
     name: g.genre,
-    fans: g.fanCount,
-    bandDemand: g.totalBandDemand,
-    total: g.fanCount + g.totalBandDemand,
+    users: g.uniqueUsers,
   }));
 
   // Bands filtered by selected genre
@@ -255,7 +251,7 @@ export function AdminDashboardClient({
             Genre Demand
           </CardTitle>
           <CardDescription>
-            Click a genre to see bands and create events
+            Unique users per genre — from direct picks and band selections. Click to drill down.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -272,14 +268,14 @@ export function AdminDashboardClient({
                     tick={{ fontSize: 12 }}
                   />
                   <Tooltip
-                    formatter={(value, name) => [
+                    formatter={(value) => [
                       value,
-                      name === "fans" ? "Direct Fan Demand" : "Band Demand",
+                      "Unique Users",
                     ]}
                   />
                   <Bar
-                    dataKey="total"
-                    name="Total Demand"
+                    dataKey="users"
+                    name="Unique Users"
                     radius={[0, 4, 4, 0]}
                     cursor="pointer"
                     onClick={(data) => data?.name && handleGenreClick(data.name as string)}
@@ -310,7 +306,7 @@ export function AdminDashboardClient({
                   >
                     {g.genre}
                     <span className="ml-1 text-xs opacity-75">
-                      ({g.fanCount + g.totalBandDemand})
+                      ({g.uniqueUsers})
                     </span>
                   </button>
                 ))}
