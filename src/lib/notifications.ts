@@ -22,6 +22,14 @@ import {
 import { formatDate, formatTime, formatCurrency, formatCurrencyDecimal } from "@/lib/utils";
 import { generateQrDataUri } from "@/lib/tickets";
 
+// TODO(resend-upgrade): Remove or set EMAIL_RATE_LIMIT_MS=0 when upgrading from
+// Resend free tier (2 emails/sec). Pro tier allows 50+/sec.
+// See: https://resend.com/pricing
+const EMAIL_DELAY_MS = parseInt(process.env.EMAIL_RATE_LIMIT_MS || "600", 10);
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 type NotificationType =
   | "EVENT_CREATED"
   | "THRESHOLD_MET"
@@ -141,7 +149,9 @@ export async function notifyEventConfirmed(eventId: string) {
 
   const formattedDate = formatDate(event.eventDate);
 
-  for (const pledge of event.pledges) {
+  for (let i = 0; i < event.pledges.length; i++) {
+    if (i > 0) await sleep(EMAIL_DELAY_MS);
+    const pledge = event.pledges[i];
     // In-app notification
     await createNotification({
       userId: pledge.userId,
@@ -190,7 +200,9 @@ export async function notifyEventCancelled(eventId: string) {
 
   if (!event) return;
 
-  for (const pledge of event.pledges) {
+  for (let i = 0; i < event.pledges.length; i++) {
+    if (i > 0) await sleep(EMAIL_DELAY_MS);
+    const pledge = event.pledges[i];
     // In-app notification
     await createNotification({
       userId: pledge.userId,
@@ -239,7 +251,9 @@ export async function notifyThresholdMet(eventId: string) {
 
   if (!event) return;
 
-  for (const pledge of event.pledges) {
+  for (let i = 0; i < event.pledges.length; i++) {
+    if (i > 0) await sleep(EMAIL_DELAY_MS);
+    const pledge = event.pledges[i];
     // In-app notification
     await createNotification({
       userId: pledge.userId,
@@ -374,6 +388,7 @@ export async function notifyMatchingFans(eventId: string) {
   const eventDate = formatDate(event.eventDate);
 
   // Notify band-preference matches (stronger match — "one of your favorites")
+  let emailIndex = 0;
   for (const pref of bandMatches) {
     await createNotification({
       userId: pref.user.id,
@@ -384,6 +399,8 @@ export async function notifyMatchingFans(eventId: string) {
     });
 
     if (pref.user.email) {
+      if (emailIndex > 0) await sleep(EMAIL_DELAY_MS);
+      emailIndex++;
       const email = newEventMatchEmail(
         pref.user.name || "Fan",
         event.band.name,
@@ -421,6 +438,8 @@ export async function notifyMatchingFans(eventId: string) {
     });
 
     if (match.user.email) {
+      if (emailIndex > 0) await sleep(EMAIL_DELAY_MS);
+      emailIndex++;
       const email = newEventMatchEmail(
         match.user.name || "Fan",
         event.band.name,
