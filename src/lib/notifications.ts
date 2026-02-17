@@ -305,13 +305,16 @@ export async function notifyMatchingFans(eventId: string) {
     include: { user: { select: userSelect } },
   });
 
-  // Find users whose genre preferences overlap with this band's genres
-  const bandGenres = event.band.genres || [];
+  // Find users whose genre preferences overlap with this band's canonical genres
+  // Use canonicalGenres (AI-mapped) for matching, fall back to raw genres for un-migrated bands
+  const matchGenres = event.band.canonicalGenres?.length > 0
+    ? event.band.canonicalGenres
+    : event.band.genres || [];
   let genreMatches: { user: { id: string; name: string | null; email: string; phone: string | null; smsOptIn: boolean } }[] = [];
 
-  if (bandGenres.length > 0) {
+  if (matchGenres.length > 0) {
     genreMatches = await prisma.userGenrePreference.findMany({
-      where: { genre: { in: bandGenres } },
+      where: { genre: { in: matchGenres } },
       include: { user: { select: userSelect } },
     });
   }
@@ -366,7 +369,7 @@ export async function notifyMatchingFans(eventId: string) {
 
   // Notify genre-preference matches (discovery — "based on your genres")
   for (const match of dedupedGenreUsers) {
-    const matchingGenres = bandGenres.join(", ");
+    const matchingGenres = matchGenres.join(", ");
     await createNotification({
       userId: match.user.id,
       type: "EVENT_CREATED",

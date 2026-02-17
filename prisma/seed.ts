@@ -35,10 +35,10 @@ async function main() {
   // ============================================
   const adminPassword = await bcrypt.hash("admin123!", 12);
   const admin = await prisma.user.upsert({
-    where: { email: "admin@demandaband.com" },
+    where: { email: "admin@demanda.band" },
     update: {},
     create: {
-      email: "admin@demandaband.com",
+      email: "admin@demanda.band",
       name: "DAB Admin",
       hashedPassword: adminPassword,
       role: "ADMIN",
@@ -363,6 +363,7 @@ async function main() {
           update: {
             name: band.name,
             genres: band.genres,
+            canonicalGenres: band.genres, // Seed genres are already canonical
             popularity: band.popularity,
             monthlyListeners: band.monthlyListeners ?? null,
             spotifyId: band.spotifyId ?? null,
@@ -372,6 +373,7 @@ async function main() {
             name: band.name,
             slug: band.slug,
             genres: band.genres,
+            canonicalGenres: band.genres, // Seed genres are already canonical
             popularity: band.popularity,
             monthlyListeners: band.monthlyListeners ?? null,
             spotifyId: band.spotifyId ?? null,
@@ -686,7 +688,7 @@ async function main() {
   console.log(`✅ ${pledgeCount} sample pledges created`);
 
   console.log("\n🎶 Seeding complete! Database is ready.\n");
-  console.log("Admin login: admin@demandaband.com / admin123!");
+  console.log("Admin login: admin@demanda.band / admin123!");
   console.log("Operator login: operator@wtmd.org / wtmd123!");
   console.log("Demo user login: sarah@example.com / demo123!");
 }

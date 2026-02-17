@@ -35,11 +35,17 @@ export async function GET(req: Request) {
 
   if (genres_filter.length === 1) {
     conditions.push({
-      genres: { has: genres_filter[0] },
+      OR: [
+        { canonicalGenres: { has: genres_filter[0] } },
+        { genres: { has: genres_filter[0] } },
+      ],
     });
   } else if (genres_filter.length > 1) {
     conditions.push({
-      genres: { hasSome: genres_filter },
+      OR: [
+        { canonicalGenres: { hasSome: genres_filter } },
+        { genres: { hasSome: genres_filter } },
+      ],
     });
   }
 

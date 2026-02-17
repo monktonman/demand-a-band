@@ -7,6 +7,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { normalizeGenres } from "@/lib/genre-normalization";
 
 // ------------------------------------
 // Configuration
@@ -387,11 +388,14 @@ export async function matchArtistsToCatalog(
           slug = `${baseSlug}-${attempt}`;
         }
 
+        const canonicalGenres = await normalizeGenres(artist.genres);
+
         const newBand = await prisma.band.create({
           data: {
             name: artist.name,
             slug,
             genres: artist.genres,
+            canonicalGenres,
             imageUrl: artist.imageUrl,
             spotifyId: artist.spotifyId,
             spotifyUrl: artist.spotifyUrl || `https://open.spotify.com/artist/${artist.spotifyId}`,

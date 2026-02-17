@@ -89,7 +89,8 @@ model Band {
   id               String   @id @default(cuid())
   name             String
   slug             String   @unique
-  genres           String[]
+  genres           String[]   // Raw Spotify genres (for display)
+  canonicalGenres  String[]   // Mapped to app's 19 canonical genres (for matching)
   imageUrl         String?
   spotifyId        String?  @unique
   spotifyUrl       String?

@@ -168,13 +168,14 @@ export async function getGenreDemand() {
   });
 
   // Source 2: Band preferences with band genres — get userId + band genres
+  // Use canonicalGenres (AI-mapped) for aggregation, fall back to raw genres
   const bandPrefsWithGenres = await prisma.userBandPreference.findMany({
     where: {
       band: { genres: { isEmpty: false } },
     },
     select: {
       userId: true,
-      band: { select: { genres: true } },
+      band: { select: { genres: true, canonicalGenres: true } },
     },
   });
 
@@ -190,8 +191,12 @@ export async function getGenreDemand() {
   }
 
   // Add users from band selections (implied genre interest)
+  // Prefer canonicalGenres for matching; fall back to raw genres for un-migrated bands
   for (const pref of bandPrefsWithGenres) {
-    for (const genre of pref.band.genres) {
+    const genres = pref.band.canonicalGenres?.length > 0
+      ? pref.band.canonicalGenres
+      : pref.band.genres;
+    for (const genre of genres) {
       if (!genreUserMap.has(genre)) {
         genreUserMap.set(genre, new Set());
       }
@@ -220,9 +225,14 @@ export async function getBandsByGenreWithDemand(
 ) {
   const { search, page = 1, limit = 15, sortBy = "demand" } = options;
 
-  // Build where clause
+  // Build where clause — search both canonicalGenres and raw genres for compatibility
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: any = { genres: { has: genre } };
+  const where: any = {
+    OR: [
+      { canonicalGenres: { has: genre } },
+      { genres: { has: genre } },
+    ],
+  };
   if (search && search.length >= 1) {
     where.name = { contains: search, mode: "insensitive" };
   }
@@ -343,9 +353,15 @@ export async function getUsersForGenre(genre: string) {
   });
 
   // Source 2: Users who selected bands in this genre
+  // Search both canonicalGenres and raw genres for compatibility
   const bandPrefs = await prisma.userBandPreference.findMany({
     where: {
-      band: { genres: { has: genre } },
+      band: {
+        OR: [
+          { canonicalGenres: { has: genre } },
+          { genres: { has: genre } },
+        ],
+      },
     },
     select: {
       maxTicketPrice: true,

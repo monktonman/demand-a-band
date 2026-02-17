@@ -5,6 +5,7 @@ import { isStaffRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { searchSpotifyArtist, isSpotifyConfigured } from "@/lib/spotify";
 import { slugify } from "@/lib/utils";
+import { normalizeGenres } from "@/lib/genre-normalization";
 
 /**
  * POST /api/admin/import-artists
@@ -115,13 +116,15 @@ export async function POST() {
           continue;
         }
 
-        // Create the band
+        // Normalize genres and create the band
         const slug = await generateUniqueSlug(spotifyArtist.name);
+        const canonicalGenres = await normalizeGenres(spotifyArtist.genres);
         await prisma.band.create({
           data: {
             name: spotifyArtist.name,
             slug,
             genres: spotifyArtist.genres,
+            canonicalGenres,
             imageUrl: spotifyArtist.imageUrl,
             spotifyId: spotifyArtist.spotifyId,
             spotifyUrl: spotifyArtist.spotifyUrl,

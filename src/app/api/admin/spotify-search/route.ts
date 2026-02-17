@@ -5,6 +5,7 @@ import { isStaffRole } from "@/lib/roles";
 import { searchSpotifyArtist, isSpotifyConfigured } from "@/lib/spotify";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { normalizeGenres } from "@/lib/genre-normalization";
 
 // GET: Search Spotify for an artist and check if they're already in the catalog
 export async function GET(req: Request) {
@@ -120,12 +121,16 @@ export async function POST(req: Request) {
       slug = `${baseSlug}-${attempt}`;
     }
 
+    // Normalize Spotify genres to canonical genres for matching
+    const canonicalGenres = await normalizeGenres(genres || []);
+
     // Create the band
     const band = await prisma.band.create({
       data: {
         name,
         slug,
         genres: genres || [],
+        canonicalGenres,
         imageUrl: imageUrl || null,
         spotifyId: spotifyId || null,
         spotifyUrl: spotifyUrl || null,
