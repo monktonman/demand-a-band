@@ -4,6 +4,105 @@ import { authOptions } from "@/lib/auth";
 import { isAdmin } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
+// GET: Fetch single user with all related data (admin only)
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session || !isAdmin(session.user.role)) {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+
+  const { id } = await params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      bandPreferences: {
+        include: {
+          band: { select: { id: true, name: true, slug: true, genres: true, imageUrl: true } },
+        },
+        orderBy: { priority: "asc" },
+      },
+      cityPreferences: {
+        orderBy: { createdAt: "desc" },
+      },
+      genrePreferences: {
+        orderBy: { genre: "asc" },
+      },
+      pledges: {
+        include: {
+          event: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              status: true,
+              eventDate: true,
+              band: { select: { name: true } },
+              venue: { select: { name: true, city: true, state: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      tickets: {
+        include: {
+          event: {
+            select: {
+              id: true,
+              title: true,
+              eventDate: true,
+              band: { select: { name: true } },
+              venue: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      dreamShows: {
+        include: {
+          band: { select: { id: true, name: true, imageUrl: true } },
+          venue: { select: { id: true, name: true, city: true, state: true } },
+          _count: { select: { votes: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      notifications: {
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      },
+      feedback: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Serialize Decimal fields to strings for JSON
+  const serialized = {
+    ...user,
+    bandPreferences: user.bandPreferences.map((bp) => ({
+      ...bp,
+      maxTicketPrice: bp.maxTicketPrice.toString(),
+    })),
+    pledges: user.pledges.map((p) => ({
+      ...p,
+      totalAmount: p.totalAmount.toString(),
+    })),
+    dreamShows: user.dreamShows.map((ds) => ({
+      ...ds,
+      maxTicketPrice: ds.maxTicketPrice.toString(),
+    })),
+  };
+
+  return NextResponse.json({ user: serialized });
+}
+
 // PATCH: Update user (role, name, etc.)
 export async function PATCH(
   req: Request,

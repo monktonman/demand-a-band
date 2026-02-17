@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Users, Plus, Trash2, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import type { UserRole } from "@prisma/client";
 
 interface SerializedUser {
@@ -197,7 +198,12 @@ export function AdminUsersClient({ users }: { users: SerializedUser[] }) {
               {users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
-                    {user.name || "\u2014"}
+                    <Link
+                      href={`/admin/users/${user.id}`}
+                      className="text-orange-600 hover:underline"
+                    >
+                      {user.name || user.email}
+                    </Link>
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
