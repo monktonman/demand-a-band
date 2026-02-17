@@ -33,5 +33,5 @@ export default async function AdminVenuesPage() {
     eventCount: v._count.events,
   }));
 
-  return <AdminVenuesClient venues={serialized} readOnly={!isAdmin} />;
+  return <AdminVenuesClient venues={serialized} isAdmin={isAdmin} />;
 }

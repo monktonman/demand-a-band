@@ -1,20 +1,24 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { isAdmin } from "@/lib/roles";
+import { isAdmin, isStaffRole, isOperatorForVenue } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
-// PATCH: Update venue
+// PATCH: Update venue (admin or assigned operator)
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || !isAdmin(session.user.role)) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  if (!session || !isStaffRole(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { id } = await params;
+
+  if (!isOperatorForVenue(session, id)) {
+    return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
