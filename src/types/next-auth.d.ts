@@ -12,6 +12,7 @@ declare module "next-auth" {
       image?: string | null;
       onboarded?: boolean;
       emailVerified?: boolean;
+      operatorVenueIds?: string[];
     };
   }
 
@@ -30,5 +31,6 @@ declare module "next-auth/jwt" {
     emailVerified: boolean;
     lastVerified?: number;
     invalidated?: boolean;
+    operatorVenueIds?: string[];
   }
 }

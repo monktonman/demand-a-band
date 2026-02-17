@@ -62,8 +62,10 @@ const emptyVenue = {
 
 export function AdminVenuesClient({
   venues,
+  readOnly = false,
 }: {
   venues: SerializedVenue[];
+  readOnly?: boolean;
 }) {
   const router = useRouter();
 
@@ -328,18 +330,20 @@ export function AdminVenuesClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Venues</h1>
+          <h1 className="text-2xl font-bold">{readOnly ? "My Venues" : "Venues"}</h1>
           <p className="text-zinc-500">
-            {venues.length} venues in the Baltimore DMA
+            {venues.length} venue{venues.length !== 1 ? "s" : ""}{readOnly ? " assigned to you" : " in the Baltimore DMA"}
           </p>
         </div>
-        <Button
-          className="bg-orange-600 hover:bg-orange-700"
-          onClick={() => setShowCreate(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Venue
-        </Button>
+        {!readOnly && (
+          <Button
+            className="bg-orange-600 hover:bg-orange-700"
+            onClick={() => setShowCreate(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Venue
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -360,7 +364,7 @@ export function AdminVenuesClient({
                 <TableHead>Genres</TableHead>
                 <TableHead>Ownership</TableHead>
                 <TableHead className="text-right">Events</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -401,26 +405,28 @@ export function AdminVenuesClient({
                   <TableCell className="text-right">
                     {venue.eventCount}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-600 hover:text-zinc-800"
-                        onClick={() => openEdit(venue)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => setDeleteTarget(venue)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!readOnly && (
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-zinc-600 hover:text-zinc-800"
+                          onClick={() => openEdit(venue)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => setDeleteTarget(venue)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

@@ -49,10 +49,11 @@ const authMiddleware = withAuth(
       if (!isStaff) {
         return NextResponse.redirect(new URL("/", req.url));
       }
-      // OPERATOR can only access dashboard, events, and check-in
+      // OPERATOR can only access dashboard, events, venues (read-only), and check-in
       if (role === "OPERATOR") {
         const allowed = pathname === "/admin" ||
           pathname.startsWith("/admin/events") ||
+          pathname.startsWith("/admin/venues") ||
           pathname.startsWith("/check-in");
         if (!allowed) {
           return NextResponse.redirect(new URL("/admin", req.url));

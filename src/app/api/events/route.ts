@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { isStaffRole } from "@/lib/roles";
+import { isStaffRole, isOperatorForVenue } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { createEventSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
@@ -50,6 +50,11 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const validatedData = createEventSchema.parse(body);
+
+    // Verify operator has access to this venue
+    if (!isOperatorForVenue(session, validatedData.venueId)) {
+      return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
+    }
 
     // Generate slug from title
     const slug = slugify(validatedData.title);

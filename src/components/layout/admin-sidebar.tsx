@@ -17,7 +17,7 @@ import {
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { href: "/admin/events", label: "Events", icon: Calendar, adminOnly: false },
-  { href: "/admin/venues", label: "Venues", icon: MapPin, adminOnly: true },
+  { href: "/admin/venues", label: "Venues", operatorLabel: "My Venues", icon: MapPin, adminOnly: false },
   { href: "/admin/bands", label: "Bands", icon: Music2, adminOnly: true },
   { href: "/admin/users", label: "Users", icon: Users, adminOnly: true },
   { href: "/admin/feedback", label: "Feedback", icon: MessageSquarePlus, adminOnly: true },
@@ -62,7 +62,7 @@ export function AdminSidebar() {
               )}
             >
               <Icon className="h-4 w-4" />
-              {item.label}
+              {!isAdmin && "operatorLabel" in item && item.operatorLabel ? item.operatorLabel : item.label}
             </Link>
           );
         })}

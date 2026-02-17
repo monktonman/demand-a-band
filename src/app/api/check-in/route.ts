@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { isStaffRole, isOperatorForVenue } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 // POST: Check in a ticket by ticket code
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (
-    !session ||
-    (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")
-  ) {
+  if (!session || !isStaffRole(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,6 +19,20 @@ export async function POST(req: Request) {
         { error: "ticketCode and eventId are required" },
         { status: 400 }
       );
+    }
+
+    // Verify operator has access to this event's venue
+    const eventForAuth = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { venueId: true },
+    });
+
+    if (!eventForAuth) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    if (!isOperatorForVenue(session, eventForAuth.venueId)) {
+      return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
     }
 
     // Find the ticket
@@ -118,10 +130,7 @@ export async function POST(req: Request) {
 // GET: Get check-in stats and guest list for an event
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (
-    !session ||
-    (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")
-  ) {
+  if (!session || !isStaffRole(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -142,6 +151,7 @@ export async function GET(req: Request) {
         id: true,
         title: true,
         eventDate: true,
+        venueId: true,
         band: { select: { name: true } },
         venue: { select: { name: true, city: true, state: true } },
       },
@@ -152,6 +162,10 @@ export async function GET(req: Request) {
         { error: "Event not found" },
         { status: 404 }
       );
+    }
+
+    if (!isOperatorForVenue(session, event.venueId)) {
+      return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
     }
 
     const tickets = await prisma.ticket.findMany({

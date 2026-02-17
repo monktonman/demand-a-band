@@ -37,6 +37,7 @@ model User {
   dreamShows      DreamShow[]      @relation("dreamShowCreator")
   dreamShowVotes  DreamShowVote[]  @relation("dreamShowVoter")
   feedback        Feedback[]
+  venueOperators  VenueOperator[]
 }
 
 enum UserRole {
@@ -175,12 +176,27 @@ model Venue {
 
   events     Event[]
   dreamShows DreamShow[]
+  operators  VenueOperator[]
 }
 
 enum VenueOwnership {
   INDEPENDENT
   CHAIN
   NONPROFIT
+}
+
+model VenueOperator {
+  id        String   @id @default(cuid())
+  userId    String
+  venueId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, venueId])
+  @@index([userId])
+  @@index([venueId])
 }
 
 // ============================================

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { isStaffRole, isOperatorForVenue } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { createPaymentIntent } from "@/lib/stripe-helpers";
 import { calculateServiceFee } from "@/lib/utils";
@@ -18,7 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
+  if (!session || !isStaffRole(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -48,6 +49,10 @@ export async function GET(
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
+  if (!isOperatorForVenue(session, event.venue.id)) {
+    return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
+  }
+
   // Compute actual ticket count from quantities
   const ticketCount = event.pledges
     .filter((p) => p.status === "ACTIVE" || p.status === "CHARGED")
@@ -62,7 +67,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
+  if (!session || !isStaffRole(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -71,11 +76,15 @@ export async function PUT(
   try {
     const event = await prisma.event.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, venueId: true },
     });
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    if (!isOperatorForVenue(session, event.venueId)) {
+      return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
     }
 
     if (event.status === "CONFIRMED" || event.status === "COMPLETED") {
@@ -127,7 +136,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
+  if (!session || !isStaffRole(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -153,6 +162,10 @@ export async function PATCH(
         { error: "Event not found" },
         { status: 404 }
       );
+    }
+
+    if (!isOperatorForVenue(session, event.venue.id)) {
+      return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
     }
 
     if (action === "confirm") {
@@ -344,7 +357,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "OPERATOR")) {
+  if (!session || !isStaffRole(session.user.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -353,11 +366,15 @@ export async function DELETE(
   try {
     const event = await prisma.event.findUnique({
       where: { id },
-      select: { status: true },
+      select: { status: true, venueId: true },
     });
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    if (!isOperatorForVenue(session, event.venueId)) {
+      return NextResponse.json({ error: "You do not manage this venue" }, { status: 403 });
     }
 
     if (event.status === "CONFIRMED" || event.status === "COMPLETED") {

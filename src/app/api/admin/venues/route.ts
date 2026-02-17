@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { isAdmin } from "@/lib/roles";
+import { isAdmin, isStaffRole, getOperatorVenueFilter } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session || !isStaffRole(session.user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const venueFilter = getOperatorVenueFilter(session);
+
   const venues = await prisma.venue.findMany({
+    where: venueFilter ? { id: { in: venueFilter } } : undefined,
     orderBy: { name: "asc" },
     select: {
       id: true,

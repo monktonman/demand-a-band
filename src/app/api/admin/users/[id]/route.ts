@@ -76,6 +76,12 @@ export async function GET(
       feedback: {
         orderBy: { createdAt: "desc" },
       },
+      venueOperators: {
+        include: {
+          venue: { select: { id: true, name: true, city: true, state: true, capacity: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -117,7 +123,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const { role, name } = body;
+    const { role, name, venueIds } = body;
 
     // Prevent admin from demoting themselves
     if (id === session.user.id && role && role !== "ADMIN") {
@@ -131,11 +137,25 @@ export async function PATCH(
     if (role) updateData.role = role;
     if (name !== undefined) updateData.name = name;
 
+    // Update user fields
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
       select: { id: true, name: true, email: true, role: true },
     });
+
+    // Update venue assignments if provided
+    if (venueIds !== undefined && Array.isArray(venueIds)) {
+      // Delete existing assignments and create new ones
+      await prisma.$transaction([
+        prisma.venueOperator.deleteMany({ where: { userId: id } }),
+        ...venueIds.map((venueId: string) =>
+          prisma.venueOperator.create({
+            data: { userId: id, venueId },
+          })
+        ),
+      ]);
+    }
 
     return NextResponse.json({ user });
   } catch (error) {
@@ -178,6 +198,7 @@ export async function DELETE(
       prisma.dreamShowVote.deleteMany({ where: { userId: id } }),
       prisma.dreamShow.deleteMany({ where: { creatorId: id } }),
       prisma.feedback.deleteMany({ where: { userId: id } }),
+      prisma.venueOperator.deleteMany({ where: { userId: id } }),
       prisma.account.deleteMany({ where: { userId: id } }),
       prisma.session.deleteMany({ where: { userId: id } }),
       prisma.user.delete({ where: { id } }),

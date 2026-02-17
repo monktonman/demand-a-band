@@ -32,7 +32,11 @@ import {
   XCircle,
   Globe,
   Calendar,
+  Building2,
+  X,
+  Plus,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── Interfaces ──────────────────────────────────────────────
 
@@ -125,6 +129,27 @@ interface FeedbackDetail {
   createdAt: string;
 }
 
+interface VenueAssignment {
+  id: string;
+  venueId: string;
+  createdAt: string;
+  venue: {
+    id: string;
+    name: string;
+    city: string;
+    state: string;
+    capacity: number;
+  };
+}
+
+interface VenueOption {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
+  capacity: number;
+}
+
 interface UserDetail {
   id: string;
   email: string;
@@ -144,6 +169,7 @@ interface UserDetail {
   dreamShows: DreamShowDetail[];
   notifications: NotificationDetail[];
   feedback: FeedbackDetail[];
+  venueOperators: VenueAssignment[];
 }
 
 // ─── Constants ───────────────────────────────────────────────
@@ -220,16 +246,68 @@ export default function AdminUserDetailPage({
   const { id } = use(params);
   const [user, setUser] = useState<UserDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [allVenues, setAllVenues] = useState<VenueOption[]>([]);
+  const [assignedVenueIds, setAssignedVenueIds] = useState<string[]>([]);
+  const [isSavingVenues, setIsSavingVenues] = useState(false);
+  const [venuesDirty, setVenuesDirty] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
       const res = await fetch(`/api/admin/users/${id}`);
       const data = await res.json();
       setUser(data.user || null);
+      if (data.user?.venueOperators) {
+        setAssignedVenueIds(data.user.venueOperators.map((vo: VenueAssignment) => vo.venueId));
+      }
       setIsLoading(false);
     };
     loadUser();
   }, [id]);
+
+  // Load all venues for assignment selector (only when user is an operator)
+  useEffect(() => {
+    if (user?.role !== "OPERATOR") return;
+    const loadVenues = async () => {
+      const res = await fetch("/api/admin/venues");
+      const data = await res.json();
+      setAllVenues(data.venues || []);
+    };
+    loadVenues();
+  }, [user?.role]);
+
+  const handleSaveVenues = async () => {
+    setIsSavingVenues(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venueIds: assignedVenueIds }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update venue assignments");
+      }
+      toast.success("Venue assignments updated");
+      setVenuesDirty(false);
+      // Reload user to get updated data
+      const reloadRes = await fetch(`/api/admin/users/${id}`);
+      const reloadData = await reloadRes.json();
+      setUser(reloadData.user || null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update venues");
+    } finally {
+      setIsSavingVenues(false);
+    }
+  };
+
+  const toggleVenue = (venueId: string) => {
+    setAssignedVenueIds((prev) =>
+      prev.includes(venueId)
+        ? prev.filter((id) => id !== venueId)
+        : [...prev, venueId]
+    );
+    setVenuesDirty(true);
+  };
 
   if (isLoading) {
     return (
@@ -370,6 +448,89 @@ export default function AdminUserDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Venue Assignments (only for OPERATOR users) */}
+      {user.role === "OPERATOR" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-orange-600" />
+              Venue Assignments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Currently assigned venues */}
+            {assignedVenueIds.length === 0 ? (
+              <p className="text-sm text-zinc-500 mb-4">
+                No venues assigned. This operator cannot create events or access any venue data until assigned.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {assignedVenueIds.map((venueId) => {
+                  const venue =
+                    user.venueOperators.find((vo) => vo.venueId === venueId)?.venue ||
+                    allVenues.find((v) => v.id === venueId);
+                  return (
+                    <Badge
+                      key={venueId}
+                      variant="outline"
+                      className="flex items-center gap-1.5 py-1.5 px-3 text-sm border-orange-300 text-orange-700"
+                    >
+                      <MapPin className="h-3 w-3" />
+                      {venue ? `${venue.name} (${venue.city}, ${venue.state})` : venueId}
+                      <button
+                        onClick={() => toggleVenue(venueId)}
+                        className="ml-1 rounded-full hover:bg-orange-100 p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Add venue selector */}
+            {allVenues.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-zinc-700">Add venues:</p>
+                <div className="flex flex-wrap gap-2">
+                  {allVenues
+                    .filter((v) => !assignedVenueIds.includes(v.id))
+                    .map((venue) => (
+                      <Badge
+                        key={venue.id}
+                        variant="outline"
+                        className="cursor-pointer flex items-center gap-1.5 py-1.5 px-3 text-sm hover:bg-zinc-50"
+                        onClick={() => toggleVenue(venue.id)}
+                      >
+                        <Plus className="h-3 w-3" />
+                        {venue.name} ({venue.city}, {venue.state})
+                      </Badge>
+                    ))}
+                  {allVenues.filter((v) => !assignedVenueIds.includes(v.id)).length === 0 && (
+                    <p className="text-sm text-zinc-400">All venues are assigned</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Save button */}
+            {venuesDirty && (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  className="bg-orange-600 hover:bg-orange-700"
+                  onClick={handleSaveVenues}
+                  disabled={isSavingVenues}
+                >
+                  {isSavingVenues && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Venue Assignments
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabbed Detail Sections */}
       <Tabs defaultValue="bands">

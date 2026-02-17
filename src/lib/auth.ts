@@ -41,6 +41,16 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid email or password");
         }
 
+        // Load operator venue assignments
+        let operatorVenueIds: string[] = [];
+        if (user.role === "OPERATOR") {
+          const assignments = await prisma.venueOperator.findMany({
+            where: { userId: user.id },
+            select: { venueId: true },
+          });
+          operatorVenueIds = assignments.map((a) => a.venueId);
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -49,6 +59,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           onboarded: user.onboarded,
           emailVerified: user.emailVerified,
+          operatorVenueIds,
         };
       },
     }),
@@ -60,6 +71,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.onboarded = user.onboarded;
         token.emailVerified = !!user.emailVerified;
+        token.operatorVenueIds = (user as unknown as { operatorVenueIds?: string[] }).operatorVenueIds ?? [];
         token.lastVerified = Date.now();
       }
 
@@ -102,6 +114,17 @@ export const authOptions: NextAuthOptions = {
           token.emailVerified = !!dbUser.emailVerified;
           token.name = dbUser.name;
           token.lastVerified = Date.now();
+
+          // Refresh operator venue assignments
+          if (dbUser.role === "OPERATOR") {
+            const assignments = await prisma.venueOperator.findMany({
+              where: { userId: dbUser.id },
+              select: { venueId: true },
+            });
+            token.operatorVenueIds = assignments.map((a) => a.venueId);
+          } else {
+            token.operatorVenueIds = [];
+          }
         } catch {
           // If DB check fails, keep existing token (don't break sessions)
         }
@@ -123,6 +146,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.onboarded = token.onboarded;
         session.user.emailVerified = token.emailVerified;
+        session.user.operatorVenueIds = token.operatorVenueIds;
       }
       return session;
     },
